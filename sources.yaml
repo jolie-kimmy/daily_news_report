@@ -7,14 +7,25 @@ report:
   selection:
     minimum_applications:
       Phone: 2
+      Tablet & Foldable: 1
       Watch & Wearables: 1
       Gaming: 2
       Note PC: 2
       Automotive: 2
       Monitor: 2
       TV: 2
+      XR & Spatial Computing: 1
+      Digital Signage: 1
+      Home Appliances: 1
+      Retail & Kiosk: 1
+      Medical & Healthcare: 1
       Industrial & Robotics: 1
       AI Devices: 1
+      Mobility & Transportation: 1
+      Public Infrastructure: 1
+      Education & Collaboration: 1
+      E-Paper & Low Power: 1
+      Defense & Rugged: 1
     section_limits:
       Samsung Display Focus: 8
       Competitor Moves: 7
@@ -86,11 +97,20 @@ report_sections:
       - MacBook
       - laptop
       - tablet
+      - foldable
       - Apple Watch
       - Galaxy Watch
       - gaming
       - monitor
       - TV
+      - signage
+      - kiosk
+      - medical
+      - HMI
+      - appliance
+      - aircraft
+      - train
+      - e-paper
       - AI glasses
       - smart glasses
       - robot
@@ -221,6 +241,14 @@ topics:
     - Galaxy
     - foldable phone
     - mobile OLED
+  Tablet & Foldable:
+    - tablet display
+    - tablet OLED
+    - iPad
+    - foldable display
+    - foldable OLED
+    - rollable display
+    - dual-screen device
   Watch & Wearables:
     - smartwatch display
     - smartwatch
@@ -229,6 +257,8 @@ topics:
     - Apple Watch
     - Galaxy Watch
     - microLED watch
+    - smart ring
+    - wearable device
   Gaming:
     - gaming monitor
     - gaming display
@@ -256,6 +286,48 @@ topics:
     - Mini LED TV
     - microLED TV
     - QD-OLED TV
+  XR & Spatial Computing:
+    - AR display
+    - VR display
+    - XR display
+    - mixed reality display
+    - spatial computing display
+    - headset display
+    - near-eye display
+    - microOLED
+    - smart glasses
+  Digital Signage:
+    - digital signage
+    - signage display
+    - video wall
+    - commercial display
+    - transparent display
+    - outdoor display
+    - DOOH
+  Home Appliances:
+    - refrigerator display
+    - appliance display
+    - smart home display
+    - smart speaker display
+    - kitchen display
+    - washer display
+    - home hub display
+  Retail & Kiosk:
+    - kiosk display
+    - POS display
+    - retail display
+    - self-service display
+    - vending display
+    - menu board display
+    - shelf display
+  Medical & Healthcare:
+    - medical display
+    - healthcare display
+    - surgical display
+    - diagnostic monitor
+    - patient monitor
+    - ultrasound display
+    - endoscopy display
   Industrial & Robotics:
     - industrial display
     - robot display
@@ -264,6 +336,8 @@ topics:
     - smart factory display
     - machine vision display
     - rugged display
+    - PLC display
+    - control room display
   AI Devices:
     - AI device display
     - AI glasses
@@ -272,6 +346,48 @@ topics:
     - XR headset
     - mixed reality display
     - spatial computing display
+    - AI pin
+    - AI wearable
+    - companion robot display
+    - edge AI display
+  Mobility & Transportation:
+    - aircraft display
+    - avionics display
+    - train display
+    - railway display
+    - marine display
+    - ship display
+    - eVTOL display
+    - mobility display
+  Public Infrastructure:
+    - public display
+    - transportation display
+    - airport display
+    - station display
+    - bus stop display
+    - smart city display
+    - traffic display
+  Education & Collaboration:
+    - interactive whiteboard
+    - classroom display
+    - education display
+    - conference room display
+    - collaboration display
+    - electronic blackboard
+  E-Paper & Low Power:
+    - e-paper
+    - e-reader
+    - electronic shelf label
+    - ESL display
+    - reflective display
+    - low power display
+  Defense & Rugged:
+    - rugged display
+    - military display
+    - defense display
+    - cockpit display
+    - tactical display
+    - wearable military display
   Supply Chain:
     - capex
     - fab
@@ -322,3 +438,25 @@ feeds:
     url: https://news.google.com/rss/search?q=industrial%20robotics%20HMI%20display%20smart%20factory%20rugged%20display&hl=en-US&gl=US&ceid=US:en
   - name: Google News - AI Device Display
     url: https://news.google.com/rss/search?q=AI%20device%20display%20smart%20glasses%20AR%20XR%20headset&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Tablet Foldable Display
+    url: https://news.google.com/rss/search?q=tablet%20foldable%20rollable%20OLED%20display%20panel&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - XR Display
+    url: https://news.google.com/rss/search?q=AR%20VR%20XR%20microOLED%20near-eye%20display%20smart%20glasses&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Digital Signage
+    url: https://news.google.com/rss/search?q=digital%20signage%20commercial%20display%20video%20wall%20OLED%20LED&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Home Appliance Display
+    url: https://news.google.com/rss/search?q=smart%20home%20appliance%20display%20refrigerator%20screen%20OLED&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Retail Kiosk Display
+    url: https://news.google.com/rss/search?q=retail%20kiosk%20POS%20display%20self-service%20screen&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Medical Display
+    url: https://news.google.com/rss/search?q=medical%20display%20surgical%20monitor%20diagnostic%20OLED%20panel&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Mobility Display
+    url: https://news.google.com/rss/search?q=aircraft%20train%20marine%20mobility%20display%20cockpit%20screen&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Public Infrastructure Display
+    url: https://news.google.com/rss/search?q=public%20infrastructure%20airport%20station%20bus%20stop%20smart%20city%20display&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Education Collaboration Display
+    url: https://news.google.com/rss/search?q=interactive%20whiteboard%20education%20conference%20collaboration%20display&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - E Paper Display
+    url: https://news.google.com/rss/search?q=e-paper%20e-reader%20electronic%20shelf%20label%20reflective%20display&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Defense Rugged Display
+    url: https://news.google.com/rss/search?q=military%20defense%20rugged%20tactical%20display%20cockpit%20screen&hl=en-US&gl=US&ceid=US:en

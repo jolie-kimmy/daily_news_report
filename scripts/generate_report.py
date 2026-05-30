@@ -377,80 +377,16 @@ def issue_key(article: Article) -> str:
     return f"title:{normalize_issue_text(article.title)}"
 
 
-def application_bucket(article: Article) -> str | None:
+def application_bucket(article: Article, config: dict[str, Any]) -> str | None:
+    for bucket in application_lenses(config):
+        if bucket in article.topics:
+            return bucket
+
     text = article_text(article).lower()
-    application_terms = {
-        "Phone": [
-            "smartphone",
-            "iphone",
-            "galaxy s",
-            "foldable phone",
-            "mobile oled",
-            "phone display",
-        ],
-        "Watch & Wearables": [
-            "smartwatch",
-            "wearable",
-            "apple watch",
-            "galaxy watch",
-            "microled watch",
-        ],
-        "Gaming": [
-            "gaming display",
-            "handheld gaming",
-            "game console",
-            "nintendo switch",
-            "steam deck",
-            "vr headset",
-        ],
-        "Note PC": [
-            "notebook",
-            "laptop",
-            "oled laptop",
-            "ai pc",
-            "macbook",
-        ],
-        "Automotive": [
-            "automotive",
-            "vehicle",
-            "cockpit",
-            "car display",
-            "ferrari",
-            "electric vehicle",
-        ],
-        "Monitor": [
-            "monitor",
-            "pc display",
-        ],
-        "TV": [
-            "tv panel",
-            "oled tv",
-            "lcd tv",
-            "mini led tv",
-            "microled tv",
-            "qd-oled tv",
-        ],
-        "Industrial & Robotics": [
-            "industrial display",
-            "robot",
-            "robotics",
-            "hmi",
-            "smart factory",
-            "machine vision",
-            "rugged display",
-        ],
-        "AI Devices": [
-            "ai device",
-            "ai glasses",
-            "smart glasses",
-            "ar glasses",
-            "xr headset",
-            "mixed reality",
-            "spatial computing",
-        ],
-    }
-    for bucket, terms in application_terms.items():
-        if any(term in text for term in terms):
+    topics = config.get("topics", {})
+    for bucket in application_lenses(config):
+        terms = topics.get(bucket, [])
+        if any(term.lower() in text for term in terms):
             return bucket
     return None
 
@@ -507,7 +443,7 @@ def select_articles(articles: list[Article], config: dict[str, Any]) -> list[Art
 
     for bucket, minimum in minimum_applications.items():
         bucket_articles = [
-            article for article in sorted_articles if application_bucket(article) == bucket
+            article for article in sorted_articles if application_bucket(article, config) == bucket
         ]
         added = 0
         for article in bucket_articles:
