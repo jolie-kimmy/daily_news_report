@@ -4,6 +4,23 @@ report:
   max_items: 25
   lookback_days: 7
 
+samsung_display_relevance:
+  exact:
+    - Samsung Display
+    - Samsung's display
+    - Samsung OLED
+    - Samsung QD-OLED
+  related:
+    - Samsung
+    - QD-OLED
+    - OLED monitor
+    - OLED panel
+    - foldable OLED
+    - Galaxy display
+    - The Wall
+    - MicroLED
+    - microLED
+
 keywords:
   core:
     - OLED

@@ -35,6 +35,7 @@ class Article:
     summary: str
     topics: tuple[str, ...]
     score: int
+    samsung_display_score: int
 
 
 def load_config() -> dict[str, Any]:
@@ -101,6 +102,28 @@ def score_article(text: str, keywords: dict[str, list[str]]) -> int:
     return score
 
 
+def score_samsung_display_relevance(
+    text: str,
+    feed_name: str,
+    config: dict[str, Any],
+) -> int:
+    terms = config.get("samsung_display_relevance", {})
+    lowered = text.lower()
+    score = 0
+
+    score += sum(35 for term in terms.get("exact", []) if term.lower() in lowered)
+    score += sum(10 for term in terms.get("related", []) if term.lower() in lowered)
+
+    if "samsung display" in feed_name.lower():
+        score += 20
+    if "samsung" in lowered and any(
+        term in lowered for term in ("display", "oled", "panel", "microled", "qd-oled")
+    ):
+        score += 20
+
+    return min(score, 100)
+
+
 def parse_feed(
     feed_name: str,
     data: bytes,
@@ -140,6 +163,11 @@ def parse_feed(
                 summary=summary,
                 topics=find_topics(combined, config["topics"]),
                 score=score,
+                samsung_display_score=score_samsung_display_relevance(
+                    combined,
+                    feed_name,
+                    config,
+                ),
             )
         )
 
@@ -252,14 +280,15 @@ def render_report(report_date: dt.date, articles: list[Article], config: dict[st
         )
         lines.extend(
             [
-                f"### {index}. {article.title}",
+                f"### {index}. [{article.title}]({article.link})",
                 "",
                 f"- Source: {article.source}",
                 f"- Published: {published}",
                 f"- Topics: {', '.join(article.topics)}",
                 f"- Relevance score: {article.score}",
+                f"- Samsung Display relevance score: {article.samsung_display_score}/100",
                 f"- Summary: {short_summary(article)}",
-                f"- Link: {article.link}",
+                f"- Original news: [Open article]({article.link})",
                 "",
             ]
         )

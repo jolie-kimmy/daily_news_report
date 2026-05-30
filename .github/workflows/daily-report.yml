@@ -2,8 +2,8 @@ name: Daily Display News Report
 
 on:
   schedule:
-    # 07:00 Asia/Seoul
-    - cron: "0 22 * * *"
+    # 09:00 Asia/Seoul
+    - cron: "0 0 * * *"
   workflow_dispatch:
 
 permissions:

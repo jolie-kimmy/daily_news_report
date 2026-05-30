@@ -13,6 +13,7 @@ The first version focuses on:
 - Display panel makers such as Samsung Display, LG Display, BOE, AUO, Innolux,
   Tianma, Visionox, Japan Display, and Sharp
 - Supply chain, panel pricing, capex, capacity, demand, and application trends
+- Samsung Display relevance scoring for each collected article
 
 ## Repository Layout
 
@@ -45,7 +46,7 @@ python scripts/generate_report.py --date 2026-05-30
 
 ## GitHub Actions
 
-The workflow runs every day at 07:00 Korea Standard Time and commits a new
+The workflow runs every day at 09:00 Korea Standard Time and commits a new
 report when there are relevant news items.
 
 Required repository setting:
