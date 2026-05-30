@@ -1,6 +1,6 @@
 # Display Weekly Report
 
-Display-industry report generator.
+Display-industry report generator for Korean readers.
 
 This repository collects display-industry news from RSS feeds, filters relevant
 articles, groups them by topic, scores Samsung Display relevance, and writes a
@@ -17,7 +17,7 @@ The first version focuses on:
 - Samsung Display relevance scoring for each collected article
 - Thematic grouping by Samsung Display focus, market trends, customers,
   competitors, technology, and supply chain signals
-- English output optimized for a visual GitHub Pages report
+- English report title and category headings with Korean article summaries and implications
 
 ## Repository Layout
 
