@@ -4,6 +4,21 @@ report:
   timezone: Asia/Seoul
   max_items: 25
   lookback_days: 7
+  selection:
+    minimum_applications:
+      Phone: 2
+      Watch & Wearables: 1
+      Gaming: 2
+      Note PC: 2
+      Automotive: 2
+      Monitor: 2
+      TV: 2
+      Industrial & Robotics: 1
+      AI Devices: 1
+    section_limits:
+      Samsung Display Focus: 8
+      Competitor Moves: 7
+      Technology Watch: 7
 
 samsung_display_relevance:
   exact:
@@ -65,6 +80,20 @@ report_sections:
       - vehicle
       - cockpit
       - Galaxy
+      - smartphone
+      - iPhone
+      - iPad
+      - MacBook
+      - laptop
+      - tablet
+      - Apple Watch
+      - Galaxy Watch
+      - gaming
+      - monitor
+      - TV
+      - AI glasses
+      - smart glasses
+      - robot
   - id: competitor_moves
     title: Competitor Moves
     description: Activity from competing panel makers and adjacent display manufacturers.
@@ -181,6 +210,68 @@ topics:
     - automotive display
     - vehicle display
     - cockpit display
+    - automotive
+    - vehicle
+    - Ferrari
+    - electric vehicle
+  Phone:
+    - smartphone display
+    - smartphone
+    - iPhone
+    - Galaxy
+    - foldable phone
+    - mobile OLED
+  Watch & Wearables:
+    - smartwatch display
+    - smartwatch
+    - wearable display
+    - wearable OLED
+    - Apple Watch
+    - Galaxy Watch
+    - microLED watch
+  Gaming:
+    - gaming monitor
+    - gaming display
+    - handheld gaming
+    - game console
+    - Nintendo Switch
+    - Steam Deck
+    - VR headset
+  Note PC:
+    - notebook display
+    - notebook OLED
+    - laptop display
+    - OLED laptop
+    - AI PC
+    - MacBook
+  Monitor:
+    - monitor panel
+    - OLED monitor
+    - gaming monitor
+    - PC monitor
+  TV:
+    - TV panel
+    - OLED TV
+    - LCD TV
+    - Mini LED TV
+    - microLED TV
+    - QD-OLED TV
+  Industrial & Robotics:
+    - industrial display
+    - robot display
+    - robotics display
+    - HMI display
+    - smart factory display
+    - machine vision display
+    - rugged display
+  AI Devices:
+    - AI device display
+    - AI glasses
+    - smart glasses
+    - AR glasses
+    - XR headset
+    - mixed reality display
+    - spatial computing display
   Supply Chain:
     - capex
     - fab
@@ -203,3 +294,31 @@ feeds:
     url: https://news.google.com/rss/search?q=%22LG%20Display%22&hl=en-US&gl=US&ceid=US:en
   - name: Google News - BOE Display
     url: https://news.google.com/rss/search?q=BOE%20display%20panel&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Smartphone OLED
+    url: https://news.google.com/rss/search?q=smartphone%20OLED%20display%20panel&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Foldable OLED
+    url: https://news.google.com/rss/search?q=foldable%20OLED%20display%20smartphone&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Automotive Display
+    url: https://news.google.com/rss/search?q=automotive%20OLED%20display%20vehicle%20cockpit&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - IT OLED
+    url: https://news.google.com/rss/search?q=OLED%20display%20laptop%20tablet%20monitor&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Apple Display
+    url: https://news.google.com/rss/search?q=Apple%20OLED%20display%20iPad%20MacBook&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - iPhone OLED
+    url: https://news.google.com/rss/search?q=iPhone%20OLED%20panel%20supplier&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Galaxy OLED
+    url: https://news.google.com/rss/search?q=Galaxy%20OLED%20panel%20Samsung%20BOE&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Watch Display
+    url: https://news.google.com/rss/search?q=smartwatch%20OLED%20microLED%20display%20Apple%20Watch%20Galaxy%20Watch&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Gaming Display
+    url: https://news.google.com/rss/search?q=gaming%20OLED%20display%20monitor%20handheld%20VR%20headset&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Note PC OLED
+    url: https://news.google.com/rss/search?q=notebook%20laptop%20OLED%20display%20AI%20PC&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Monitor Display
+    url: https://news.google.com/rss/search?q=OLED%20monitor%20panel%20gaming%20display&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - TV Display
+    url: https://news.google.com/rss/search?q=OLED%20TV%20Mini%20LED%20microLED%20TV%20panel&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Industrial Robotics Display
+    url: https://news.google.com/rss/search?q=industrial%20robotics%20HMI%20display%20smart%20factory%20rugged%20display&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - AI Device Display
+    url: https://news.google.com/rss/search?q=AI%20device%20display%20smart%20glasses%20AR%20XR%20headset&hl=en-US&gl=US&ceid=US:en

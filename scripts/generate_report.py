@@ -93,6 +93,33 @@ def normalize_title(title: str) -> str:
     return title.strip()
 
 
+def normalize_issue_text(text: str) -> str:
+    text = re.sub(r"\s+-\s+[^-]+$", "", text)
+    text = re.sub(r"[^0-9a-zA-Z가-힣]+", " ", text.lower())
+    stopwords = {
+        "the",
+        "a",
+        "an",
+        "and",
+        "with",
+        "for",
+        "to",
+        "of",
+        "in",
+        "on",
+        "at",
+        "new",
+        "first",
+        "world",
+        "worlds",
+        "display",
+        "panel",
+        "panels",
+    }
+    tokens = [token for token in text.split() if token not in stopwords]
+    return " ".join(tokens[:12])
+
+
 def contains_hangul(text: str) -> bool:
     return bool(re.search(r"[가-힣]", text))
 
@@ -329,6 +356,175 @@ def collect_articles(config: dict[str, Any], report_date: dt.date) -> list[Artic
         ),
         reverse=True,
     )
+
+
+def issue_key(article: Article) -> str:
+    text = f"{article.title} {article.summary}".lower()
+    compact = re.sub(r"[^a-z0-9]+", "", text)
+    qd_oled = "qdoled" in compact
+    if (qd_oled and "4k" in text and ("360hz" in compact or "monitor" in text)) or (
+        "samsung" in text and "oled" in text and "4k" in text and "360hz" in compact
+    ):
+        return "issue:4k-360hz-qd-oled-monitor"
+    if "lg" in text and "240hz" in compact and "rgbstripe" in compact and "oled" in text:
+        return "issue:lg-display-240hz-rgb-stripe-oled"
+    if "ferrari" in text and any(term in text for term in ("oled", "amoled", "display", "screen", "panel")):
+        return "issue:ferrari-oled-display"
+    if "boe" in text and "galaxy s27" in text:
+        return "issue:boe-galaxy-s27-oled"
+    if "microled" in text and "auo" in text and "aledia" in text:
+        return "issue:auo-aledia-microled"
+    return f"title:{normalize_issue_text(article.title)}"
+
+
+def application_bucket(article: Article) -> str | None:
+    text = article_text(article).lower()
+    application_terms = {
+        "Phone": [
+            "smartphone",
+            "iphone",
+            "galaxy s",
+            "foldable phone",
+            "mobile oled",
+            "phone display",
+        ],
+        "Watch & Wearables": [
+            "smartwatch",
+            "wearable",
+            "apple watch",
+            "galaxy watch",
+            "microled watch",
+        ],
+        "Gaming": [
+            "gaming display",
+            "handheld gaming",
+            "game console",
+            "nintendo switch",
+            "steam deck",
+            "vr headset",
+        ],
+        "Note PC": [
+            "notebook",
+            "laptop",
+            "oled laptop",
+            "ai pc",
+            "macbook",
+        ],
+        "Automotive": [
+            "automotive",
+            "vehicle",
+            "cockpit",
+            "car display",
+            "ferrari",
+            "electric vehicle",
+        ],
+        "Monitor": [
+            "monitor",
+            "pc display",
+        ],
+        "TV": [
+            "tv panel",
+            "oled tv",
+            "lcd tv",
+            "mini led tv",
+            "microled tv",
+            "qd-oled tv",
+        ],
+        "Industrial & Robotics": [
+            "industrial display",
+            "robot",
+            "robotics",
+            "hmi",
+            "smart factory",
+            "machine vision",
+            "rugged display",
+        ],
+        "AI Devices": [
+            "ai device",
+            "ai glasses",
+            "smart glasses",
+            "ar glasses",
+            "xr headset",
+            "mixed reality",
+            "spatial computing",
+        ],
+    }
+    for bucket, terms in application_terms.items():
+        if any(term in text for term in terms):
+            return bucket
+    return None
+
+
+def article_sort_key(article: Article) -> tuple[int, int, dt.datetime]:
+    return (
+        article.score + article.samsung_display_score,
+        article.samsung_display_score,
+        article.published or dt.datetime.min.replace(tzinfo=dt.timezone.utc),
+    )
+
+
+def select_articles(articles: list[Article], config: dict[str, Any]) -> list[Article]:
+    max_items = int(config["report"].get("max_items", 25))
+    selection = config["report"].get("selection", {})
+    minimum_applications = selection.get("minimum_applications", {})
+    section_limits = selection.get("section_limits", {})
+
+    sorted_articles = sorted(articles, key=article_sort_key, reverse=True)
+    selected: list[Article] = []
+    used_issues: set[str] = set()
+    section_counts_selected: dict[str, int] = {}
+
+    def can_add(article: Article, enforce_section_limit: bool = True) -> bool:
+        if issue_key(article) in used_issues:
+            return False
+        if enforce_section_limit:
+            section_name = section_title(
+                next(
+                    section
+                    for section in config.get("report_sections", [])
+                    if section["id"] == classify_article(article, config)
+                )
+            )
+            limit = section_limits.get(section_name)
+            if limit is not None and section_counts_selected.get(section_name, 0) >= int(limit):
+                return False
+        return True
+
+    def add(article: Article) -> bool:
+        if len(selected) >= max_items or not can_add(article):
+            return False
+        section_name = section_title(
+            next(
+                section
+                for section in config.get("report_sections", [])
+                if section["id"] == classify_article(article, config)
+            )
+        )
+        selected.append(article)
+        used_issues.add(issue_key(article))
+        section_counts_selected[section_name] = section_counts_selected.get(section_name, 0) + 1
+        return True
+
+    for bucket, minimum in minimum_applications.items():
+        bucket_articles = [
+            article for article in sorted_articles if application_bucket(article) == bucket
+        ]
+        added = 0
+        for article in bucket_articles:
+            if added >= int(minimum):
+                break
+            if add(article):
+                added += 1
+
+    for article in sorted_articles:
+        add(article)
+
+    return sorted(selected, key=article_sort_key, reverse=True)
+
+
+def application_lenses(config: dict[str, Any]) -> list[str]:
+    selection = config["report"].get("selection", {})
+    return list(selection.get("minimum_applications", {}).keys())
 
 
 def short_text(text: str) -> str:
@@ -601,8 +797,7 @@ def strategic_implications(selected: list[Article], grouped: dict[str, list[Arti
 
 
 def render_report(report_date: dt.date, articles: list[Article], config: dict[str, Any]) -> str:
-    max_items = int(config["report"].get("max_items", 25))
-    selected = articles[:max_items]
+    selected = select_articles(articles, config)
     generated_at = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     top_topics = topic_counts(selected) if selected else []
     grouped = group_articles_by_section(selected, config) if selected else {}
@@ -622,6 +817,7 @@ def render_report(report_date: dt.date, articles: list[Article], config: dict[st
         f"| 수집 기간 | 최근 {int(config['report'].get('lookback_days', 7))}일 |",
         f"| 추적 기사 수 | {len(selected)} |",
         f"| 주요 주제 | {md_cell(', '.join(top_topics[:5]) if top_topics else '없음')} |",
+        f"| 응용처 렌즈 | {md_cell(', '.join(application_lenses(config)))} |",
         f"| 핵심 신호 | {md_cell(key_signal_label(selected, grouped))} |",
         f"| 분석 기준 | 삼성디스플레이 연관성 |",
         "",
@@ -723,8 +919,7 @@ def render_html_article(article: Article) -> str:
 
 
 def render_html_report(report_date: dt.date, articles: list[Article], config: dict[str, Any]) -> str:
-    max_items = int(config["report"].get("max_items", 25))
-    selected = articles[:max_items]
+    selected = select_articles(articles, config)
     grouped = group_articles_by_section(selected, config) if selected else {}
     section_mix = section_counts(grouped, config) if selected else []
     top_topics = topic_counts(selected) if selected else []
@@ -909,6 +1104,7 @@ def render_html_report(report_date: dt.date, articles: list[Article], config: di
         <div class="metric"><span>리포트 날짜</span><strong>{report_date.isoformat()}</strong></div>
         <div class="metric"><span>추적 기사 수</span><strong>{len(selected)}</strong></div>
         <div class="metric"><span>주요 주제</span><strong>{html_escape(', '.join(top_topics[:2]) if top_topics else '없음')}</strong></div>
+        <div class="metric"><span>응용처 렌즈</span><strong>{html_escape(', '.join(application_lenses(config)[:3]))}+</strong></div>
         <div class="metric"><span>생성 시각</span><strong>{html_escape(generated_at)}</strong></div>
       </div>
     </div>
