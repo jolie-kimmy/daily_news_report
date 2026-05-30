@@ -421,6 +421,121 @@ def section_counts(grouped: dict[str, list[Article]], config: dict[str, Any]) ->
     return labels
 
 
+def company_mentions(articles: list[Article], exclude: set[str] | None = None) -> list[str]:
+    exclude = exclude or set()
+    companies = [
+        "Samsung Display",
+        "LG Display",
+        "BOE",
+        "CSOT",
+        "TCL CSOT",
+        "AUO",
+        "Innolux",
+        "Tianma",
+        "Visionox",
+        "Japan Display",
+        "Sharp",
+        "Ferrari",
+        "Apple",
+        "Dell",
+        "HP",
+        "Lenovo",
+        "Sony",
+    ]
+    text = " ".join(article_text(article) for article in articles).lower()
+    mentioned = [
+        company
+        for company in companies
+        if company not in exclude and company.lower() in text
+    ]
+    return mentioned[:6]
+
+
+def has_any(articles: list[Article], terms: list[str]) -> bool:
+    text = " ".join(article_text(article) for article in articles).lower()
+    return any(term.lower() in text for term in terms)
+
+
+def executive_summary(selected: list[Article], grouped: dict[str, list[Article]]) -> list[str]:
+    bullets: list[str] = []
+    samsung_articles = grouped.get("samsung_display_focus", [])
+    customer_articles = grouped.get("customer_oem_signals", [])
+    competitor_articles = grouped.get("competitor_moves", [])
+    tech_articles = grouped.get("technology_watch", [])
+    supply_articles = grouped.get("materials_equipment_supply_chain", [])
+
+    if has_any(samsung_articles, ["QD-OLED", "360Hz", "4K"]):
+        bullets.append(
+            "삼성디스플레이 관련 뉴스의 핵심은 4K 360Hz QD-OLED 모니터 패널입니다. 프리미엄 게이밍/IT 디스플레이에서 고주사율과 고해상도 경쟁이 본격화되는 흐름으로 볼 수 있습니다."
+        )
+    elif samsung_articles:
+        bullets.append(
+            f"삼성디스플레이 직접 관련 이슈는 '{samsung_articles[0].title_ko}'를 중심으로 형성되어 있습니다."
+        )
+
+    if customer_articles:
+        bullets.append(
+            f"고객사 관점에서는 '{customer_articles[0].title_ko}'가 주요 신호입니다. 차량용/프리미엄 세트 시장에서 OLED 채택 확대 가능성을 보여줍니다."
+        )
+
+    competitors = company_mentions(competitor_articles, exclude={"Samsung Display"})
+    if competitors:
+        bullets.append(
+            f"경쟁사 측면에서는 {', '.join(competitors)} 관련 움직임이 확인됩니다. 특히 OLED 양산, microLED 협력, 패널 수주 경쟁이 삼성디스플레이의 가격 및 고객 대응 전략에 영향을 줄 수 있습니다."
+        )
+
+    if has_any(tech_articles + supply_articles, ["microLED", "MicroLED", "module", "factory"]):
+        bullets.append(
+            "기술/공급망에서는 microLED 모듈, 생산 기반, 차세대 디스플레이 협력 이슈가 관찰됩니다. 단기 매출보다는 중장기 기술 포트폴리오와 투자 방향을 점검할 신호입니다."
+        )
+
+    if not bullets and selected:
+        bullets.append(
+            f"이번 리포트의 핵심 이슈는 '{selected[0].title_ko}'이며, 삼성디스플레이와의 직접/간접 연관성을 중심으로 후속 확인이 필요합니다."
+        )
+
+    return bullets[:4]
+
+
+def key_signal_label(selected: list[Article], grouped: dict[str, list[Article]]) -> str:
+    signals: list[str] = []
+    if has_any(grouped.get("samsung_display_focus", []), ["QD-OLED", "360Hz", "4K"]):
+        signals.append("4K 360Hz QD-OLED")
+    if grouped.get("customer_oem_signals"):
+        signals.append("차량용 OLED")
+    if grouped.get("competitor_moves"):
+        signals.append("경쟁사 OLED/microLED")
+    if has_any(
+        grouped.get("technology_watch", []) + grouped.get("materials_equipment_supply_chain", []),
+        ["microLED", "MicroLED"],
+    ):
+        signals.append("microLED")
+    if not signals and selected:
+        signals.append(selected[0].title_ko[:28])
+    return " / ".join(signals[:4]) if signals else "없음"
+
+
+def section_takeaway(section_id: str, articles: list[Article]) -> str:
+    if not articles:
+        return ""
+    first = articles[0].title_ko
+    if section_id == "samsung_display_focus":
+        return f"핵심 기사: {first}. 삼성디스플레이의 제품 경쟁력, 고객 확보, 프리미엄 패널 포지셔닝과 직접 연결되는 이슈입니다."
+    if section_id == "market_trends":
+        return f"핵심 기사: {first}. 패널 가격, 수요, 공급, 투자 사이클 변화가 삼성디스플레이의 제품 믹스와 수익성에 영향을 줄 수 있습니다."
+    if section_id == "customer_oem_signals":
+        return f"핵심 기사: {first}. 고객사 채택 신호는 삼성디스플레이의 수주 기회와 응용처 확대 가능성을 판단하는 데 중요합니다."
+    if section_id == "competitor_moves":
+        competitors = company_mentions(articles, exclude={"Samsung Display"})
+        suffix = f" 관련 업체: {', '.join(competitors)}." if competitors else ""
+        return f"핵심 기사: {first}.{suffix} 경쟁사의 양산, 협력, 가격 전략은 삼성디스플레이의 고객 방어와 차별화 전략에 영향을 줄 수 있습니다."
+    if section_id == "technology_watch":
+        return f"핵심 기사: {first}. 차세대 디스플레이 기술 변화는 삼성디스플레이의 OLED/QD-OLED 및 신규 기술 로드맵과 연결해 볼 필요가 있습니다."
+    if section_id == "materials_equipment_supply_chain":
+        return f"핵심 기사: {first}. 소재, 장비, 생산 기반 변화는 원가, 증설 속도, 공급 안정성 측면에서 의미가 있습니다."
+    return f"핵심 기사: {first}."
+
+
 def section_title(section: dict[str, Any]) -> str:
     subtitle = section.get("subtitle")
     if subtitle:
@@ -458,29 +573,33 @@ def render_article_card(index: int, article: Article) -> list[str]:
 
 
 def strategic_implications(selected: list[Article], grouped: dict[str, list[Article]]) -> list[str]:
-    samsung_count = len(grouped.get("samsung_display_focus", []))
     competitor_count = len(grouped.get("competitor_moves", []))
-    technology_count = len(grouped.get("technology_watch", []))
-    high_samsung = sum(1 for article in selected if article.samsung_display_score >= 70)
+    customer_count = len(grouped.get("customer_oem_signals", []))
+    samsung_articles = grouped.get("samsung_display_focus", [])
+    tech_and_supply = grouped.get("technology_watch", []) + grouped.get(
+        "materials_equipment_supply_chain",
+        [],
+    )
 
     implications = [
-        f"- 삼성디스플레이가 직접 또는 강하게 연관된 기사는 {high_samsung}건입니다.",
+        "- QD-OLED 모니터 이슈가 반복적으로 확인되는 만큼, 삼성디스플레이는 프리미엄 모니터 시장에서 고주사율/고해상도 차별화를 전면에 내세울 여지가 큽니다.",
     ]
+    if customer_count:
+        implications.append(
+            "- Ferrari EV향 AMOLED처럼 차량용 고객사 이슈가 확인됩니다. 모바일/IT 중심 OLED 포트폴리오를 차량용 프리미엄 디스플레이로 확장하는 기회로 볼 수 있습니다."
+        )
     if competitor_count:
         implications.append(
-            f"- 경쟁사 관련 기사는 {competitor_count}건으로, 가격/제품 출시/생산능력 변화 추적이 필요합니다."
+            "- LG디스플레이, BOE, AUO 등 경쟁사 움직임은 OLED 양산, microLED 협력, 패널 수주 경쟁으로 나타납니다. 삼성디스플레이는 기술 우위뿐 아니라 고객 락인과 가격 방어 전략도 함께 점검해야 합니다."
         )
-    if technology_count:
+    if tech_and_supply:
         implications.append(
-            f"- 기술 관련 기사는 {technology_count}건이며 OLED, QD-OLED, microLED, Mini LED, 고주사율 차별화 흐름을 확인해야 합니다."
+            "- microLED와 모듈 생산 기반 관련 뉴스는 단기 실적보다 중장기 기술 옵션의 의미가 큽니다. 삼성디스플레이는 QD-OLED 수익화와 차세대 기술 탐색의 균형이 필요합니다."
         )
-    if samsung_count == 0:
-        implications.append(
-            "- 삼성디스플레이 직접 관련 기사가 없으므로 시장/기술 간접 신호를 더 주의 깊게 확인해야 합니다."
+    if not samsung_articles:
+        implications[0] = (
+            "- 삼성디스플레이 직접 뉴스가 제한적인 경우에도 고객사, 경쟁사, 기술 신호를 통해 수요 변화와 차별화 압력을 추적할 필요가 있습니다."
         )
-    implications.append(
-        "- 후속 모니터링은 삼성디스플레이 연관성이 높고 고객사 또는 경쟁사 이슈와 겹치는 기사에 우선순위를 두는 것이 좋습니다."
-    )
     return implications
 
 
@@ -506,7 +625,7 @@ def render_report(report_date: dt.date, articles: list[Article], config: dict[st
         f"| 수집 기간 | 최근 {int(config['report'].get('lookback_days', 7))}일 |",
         f"| 추적 기사 수 | {len(selected)} |",
         f"| 주요 주제 | {md_cell(', '.join(top_topics[:5]) if top_topics else '없음')} |",
-        f"| 섹션 구성 | {md_cell('; '.join(section_mix) if section_mix else '없음')} |",
+        f"| 핵심 신호 | {md_cell(key_signal_label(selected, grouped))} |",
         f"| 분석 관점 | 삼성디스플레이 연관성 |",
         "",
         "## 요약",
@@ -528,10 +647,7 @@ def render_report(report_date: dt.date, articles: list[Article], config: dict[st
 
     lines.extend(
         [
-            f"- 설정된 뉴스 피드에서 디스플레이 산업 관련 기사 {len(selected)}건을 수집했습니다.",
-            f"- 주요 관심 주제는 {', '.join(top_topics[:5])}입니다.",
-            f"- 이번 리포트는 {len(section_mix)}개 활성 섹션으로 구성됩니다: {'; '.join(section_mix)}.",
-            "- 삼성디스플레이 연관성은 직접 언급, 제품/기술 중첩, 인접 기술 신호를 기준으로 0~100점으로 산정합니다.",
+            *(f"- {summary}" for summary in executive_summary(selected, grouped)),
             "",
             "## 주제별 뉴스",
             "",
@@ -547,7 +663,7 @@ def render_report(report_date: dt.date, articles: list[Article], config: dict[st
             [
                 f"### {section_title(section)}",
                 "",
-                f"> {section['description']}",
+                f"> {section_takeaway(section['id'], section_articles)}",
                 "",
             ]
         )
@@ -620,12 +736,13 @@ def render_html_report(report_date: dt.date, articles: list[Article], config: di
         section_articles = grouped.get(section["id"], [])
         if not section_articles:
             continue
+        takeaway = section_takeaway(section["id"], section_articles)
         cards = "\n".join(render_html_article(article) for article in section_articles)
         section_blocks.append(
             f"""
             <section class="theme-section">
               <div class="section-heading">
-                <p>{html_escape(section['description'])}</p>
+                <p>{html_escape(takeaway)}</p>
                 <h2>{html_escape(section_title(section))}</h2>
               </div>
               <div class="news-grid">{cards}</div>
@@ -777,9 +894,7 @@ def render_html_report(report_date: dt.date, articles: list[Article], config: di
         <h2>요약</h2>
       </div>
       <ul>
-        <li>설정된 뉴스 피드에서 디스플레이 산업 관련 기사 {len(selected)}건을 수집했습니다.</li>
-        <li>활성 섹션: {html_escape('; '.join(section_mix) if section_mix else '없음')}.</li>
-        <li>삼성디스플레이 연관성은 직접 언급, 제품/기술 중첩, 인접 기술 신호를 기준으로 0~100점으로 산정합니다.</li>
+        {''.join(f'<li>{html_escape(item.removeprefix("- "))}</li>' for item in executive_summary(selected, grouped))}
       </ul>
     </section>
     {''.join(section_blocks)}
