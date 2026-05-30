@@ -1,9 +1,10 @@
-# Daily News Report
+# Display Weekly Report
 
-Daily display-industry news report generator.
+Display-industry report generator.
 
 This repository collects display-industry news from RSS feeds, filters relevant
-articles, groups them by topic, and writes a Markdown report under `reports/`.
+articles, groups them by topic, scores Samsung Display relevance, and writes a
+clean Markdown report under `reports/`.
 
 ## Scope
 

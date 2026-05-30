@@ -1,5 +1,5 @@
 report:
-  title: Display Industry Daily News
+  title: Display Weekly Report
   timezone: Asia/Seoul
   max_items: 25
   lookback_days: 7

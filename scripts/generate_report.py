@@ -233,15 +233,33 @@ def short_summary(article: Article) -> str:
     return text
 
 
+def md_cell(value: object) -> str:
+    text = str(value)
+    text = text.replace("\n", " ").replace("|", r"\|")
+    return text.strip()
+
+
 def render_report(report_date: dt.date, articles: list[Article], config: dict[str, Any]) -> str:
     max_items = int(config["report"].get("max_items", 25))
     selected = articles[:max_items]
     generated_at = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    top_topics = topic_counts(selected) if selected else []
 
     lines = [
-        f"# {config['report']['title']} - {report_date.isoformat()}",
+        f"# {config['report']['title']}",
         "",
-        f"Generated at: {generated_at}",
+        "> Display technology intelligence brief focused on market signals, product moves, and Samsung Display relevance.",
+        "",
+        f"**Report date:** `{report_date.isoformat()}` | **Generated:** `{generated_at}`",
+        "",
+        "## Signal Dashboard",
+        "",
+        "| Signal | Value |",
+        "| --- | --- |",
+        f"| Coverage window | Last {int(config['report'].get('lookback_days', 7))} days |",
+        f"| Articles tracked | {len(selected)} |",
+        f"| Main topics | {md_cell(', '.join(top_topics[:5]) if top_topics else 'None')} |",
+        f"| Focus lens | Samsung Display relevance |",
         "",
         "## Executive Summary",
         "",
@@ -260,12 +278,11 @@ def render_report(report_date: dt.date, articles: list[Article], config: dict[st
         )
         return "\n".join(lines)
 
-    top_topics = topic_counts(selected)
     lines.extend(
         [
-            f"- Collected {len(selected)} relevant items from configured feeds.",
-            f"- Most active topics: {', '.join(top_topics[:5])}.",
-            "- Review the source links before making business or investment decisions.",
+            f"- {len(selected)} relevant display-industry signals were collected from configured news feeds.",
+            f"- Topic momentum is concentrated around {', '.join(top_topics[:5])}.",
+            "- Samsung Display relevance is scored from 0 to 100 using direct mentions, product overlap, and adjacent technology signals.",
             "",
             "## Key News",
             "",
@@ -282,13 +299,15 @@ def render_report(report_date: dt.date, articles: list[Article], config: dict[st
             [
                 f"### {index}. [{article.title}]({article.link})",
                 "",
-                f"- Source: {article.source}",
-                f"- Published: {published}",
-                f"- Topics: {', '.join(article.topics)}",
-                f"- Relevance score: {article.score}",
-                f"- Samsung Display relevance score: {article.samsung_display_score}/100",
-                f"- Summary: {short_summary(article)}",
-                f"- Original news: [Open article]({article.link})",
+                "| Field | Detail |",
+                "| --- | --- |",
+                f"| Source | {md_cell(article.source)} |",
+                f"| Published | {md_cell(published)} |",
+                f"| Topics | {md_cell(', '.join(article.topics))} |",
+                f"| Industry relevance | {article.score} |",
+                f"| Samsung Display relevance | {article.samsung_display_score}/100 |",
+                f"| Summary | {md_cell(short_summary(article))} |",
+                f"| Original news | [Open article]({article.link}) |",
                 "",
             ]
         )
