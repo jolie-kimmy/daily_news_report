@@ -15,6 +15,8 @@ The first version focuses on:
   Tianma, Visionox, Japan Display, and Sharp
 - Supply chain, panel pricing, capex, capacity, demand, and application trends
 - Samsung Display relevance scoring for each collected article
+- Thematic grouping by Samsung Display focus, market trends, customers,
+  competitors, technology, and supply chain signals
 
 ## Repository Layout
 

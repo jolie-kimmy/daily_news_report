@@ -21,6 +21,101 @@ samsung_display_relevance:
     - MicroLED
     - microLED
 
+report_sections:
+  - id: samsung_display_focus
+    title: Samsung Display Focus
+    description: Direct Samsung Display mentions and closely related product or technology signals.
+    keywords:
+      - Samsung Display
+      - Samsung's display
+      - Samsung OLED
+      - Samsung QD-OLED
+      - QD-OLED
+      - Galaxy display
+  - id: market_trends
+    title: Market Trends
+    description: Panel pricing, demand, supply, shipments, capacity, and investment cycle signals.
+    keywords:
+      - price
+      - prices
+      - pricing
+      - shipment
+      - shipments
+      - demand
+      - supply
+      - capacity
+      - market
+      - forecast
+      - capex
+      - investment
+      - inventory
+  - id: customer_oem_signals
+    title: Customer & OEM Signals
+    description: Customer, device brand, set maker, and automotive OEM adoption signals.
+    keywords:
+      - Apple
+      - Samsung Electronics
+      - Dell
+      - HP
+      - Lenovo
+      - Sony
+      - Ferrari
+      - automotive
+      - vehicle
+      - cockpit
+      - Galaxy
+  - id: competitor_moves
+    title: Competitor Moves
+    description: Activity from competing panel makers and adjacent display manufacturers.
+    keywords:
+      - LG Display
+      - BOE
+      - CSOT
+      - TCL CSOT
+      - AUO
+      - Innolux
+      - Tianma
+      - Visionox
+      - Japan Display
+      - Sharp
+      - E Ink
+  - id: technology_watch
+    title: Technology Watch
+    description: OLED, QD-OLED, microLED, Mini LED, backplane, foldable, and performance technology updates.
+    keywords:
+      - OLED
+      - QD-OLED
+      - AMOLED
+      - microLED
+      - MicroLED
+      - Mini LED
+      - LTPO
+      - LTPS
+      - oxide
+      - tandem
+      - foldable
+      - flexible
+      - refresh rate
+      - 360Hz
+      - 240Hz
+  - id: materials_equipment_supply_chain
+    title: Materials, Equipment & Supply Chain
+    description: Materials, equipment, fab, substrate, driver IC, and supply chain developments.
+    keywords:
+      - material
+      - materials
+      - equipment
+      - deposition
+      - evaporator
+      - substrate
+      - glass
+      - driver IC
+      - fab
+      - factory
+      - module
+      - supply chain
+      - Gen 8.6
+
 keywords:
   core:
     - OLED

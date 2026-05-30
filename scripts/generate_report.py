@@ -239,11 +239,131 @@ def md_cell(value: object) -> str:
     return text.strip()
 
 
+def md_link_text(value: object) -> str:
+    text = str(value).replace("\n", " ")
+    return text.replace("[", r"\[").replace("]", r"\]").strip()
+
+
+def article_text(article: Article) -> str:
+    return " ".join(
+        [
+            article.title,
+            article.summary,
+            article.source,
+            " ".join(article.topics),
+        ]
+    )
+
+
+def keyword_hits(text: str, keywords: list[str]) -> int:
+    lowered = text.lower()
+    return sum(1 for keyword in keywords if keyword.lower() in lowered)
+
+
+def classify_article(article: Article, config: dict[str, Any]) -> str:
+    sections = config.get("report_sections", [])
+    text = article_text(article)
+    scores: dict[str, int] = {}
+
+    for section in sections:
+        section_id = section["id"]
+        scores[section_id] = keyword_hits(text, section.get("keywords", []))
+
+    preferred_order = [
+        "competitor_moves",
+        "customer_oem_signals",
+        "market_trends",
+        "materials_equipment_supply_chain",
+    ]
+    for section_id in preferred_order:
+        if scores.get(section_id, 0) > 0:
+            return section_id
+
+    if article.samsung_display_score >= 70:
+        return "samsung_display_focus"
+
+    if scores.get("technology_watch", 0) > 0:
+        return "technology_watch"
+
+    return "technology_watch"
+
+
+def group_articles_by_section(
+    articles: list[Article],
+    config: dict[str, Any],
+) -> dict[str, list[Article]]:
+    grouped = {section["id"]: [] for section in config.get("report_sections", [])}
+    for article in articles:
+        section_id = classify_article(article, config)
+        grouped.setdefault(section_id, []).append(article)
+    return grouped
+
+
+def section_counts(grouped: dict[str, list[Article]], config: dict[str, Any]) -> list[str]:
+    labels: list[str] = []
+    for section in config.get("report_sections", []):
+        count = len(grouped.get(section["id"], []))
+        if count:
+            labels.append(f"{section['title']}: {count}")
+    return labels
+
+
+def render_article_card(index: int, article: Article) -> list[str]:
+    published = (
+        article.published.strftime("%Y-%m-%d %H:%M UTC")
+        if article.published
+        else "Unknown"
+    )
+    return [
+        f"#### {index}. [{md_link_text(article.title)}]({article.link})",
+        "",
+        "| Field | Detail |",
+        "| --- | --- |",
+        f"| Source | {md_cell(article.source)} |",
+        f"| Published | {md_cell(published)} |",
+        f"| Topics | {md_cell(', '.join(article.topics))} |",
+        f"| Industry relevance | {article.score} |",
+        f"| Samsung Display relevance | {article.samsung_display_score}/100 |",
+        f"| Summary | {md_cell(short_summary(article))} |",
+        f"| Original news | [Open article]({article.link}) |",
+        "",
+    ]
+
+
+def strategic_implications(selected: list[Article], grouped: dict[str, list[Article]]) -> list[str]:
+    samsung_count = len(grouped.get("samsung_display_focus", []))
+    competitor_count = len(grouped.get("competitor_moves", []))
+    technology_count = len(grouped.get("technology_watch", []))
+    high_samsung = sum(1 for article in selected if article.samsung_display_score >= 70)
+
+    implications = [
+        f"- Samsung Display appears directly or strongly in {high_samsung} tracked article(s), making it the primary focus lens for this report.",
+    ]
+    if competitor_count:
+        implications.append(
+            f"- Competitor activity appears in {competitor_count} article(s), so pricing, product launches, and capacity moves should be watched closely."
+        )
+    if technology_count:
+        implications.append(
+            f"- Technology momentum appears in {technology_count} article(s), especially around OLED, QD-OLED, microLED, Mini LED, and refresh-rate differentiation."
+        )
+    if samsung_count == 0:
+        implications.append(
+            "- No direct Samsung Display section items were found, so indirect market and technology signals deserve closer review."
+        )
+    implications.append(
+        "- Follow-up tracking should prioritize articles with high Samsung Display relevance and customer or competitor overlap."
+    )
+    return implications
+
+
 def render_report(report_date: dt.date, articles: list[Article], config: dict[str, Any]) -> str:
     max_items = int(config["report"].get("max_items", 25))
     selected = articles[:max_items]
     generated_at = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     top_topics = topic_counts(selected) if selected else []
+    grouped = group_articles_by_section(selected, config) if selected else {}
+    section_mix = section_counts(grouped, config) if selected else []
 
     lines = [
         f"# {config['report']['title']}",
@@ -259,6 +379,7 @@ def render_report(report_date: dt.date, articles: list[Article], config: dict[st
         f"| Coverage window | Last {int(config['report'].get('lookback_days', 7))} days |",
         f"| Articles tracked | {len(selected)} |",
         f"| Main topics | {md_cell(', '.join(top_topics[:5]) if top_topics else 'None')} |",
+        f"| Section mix | {md_cell('; '.join(section_mix) if section_mix else 'None')} |",
         f"| Focus lens | Samsung Display relevance |",
         "",
         "## Executive Summary",
@@ -270,7 +391,7 @@ def render_report(report_date: dt.date, articles: list[Article], config: dict[st
             [
                 "- No matching display-industry news items were found today.",
                 "",
-                "## Key News",
+                "## News by Theme",
                 "",
                 "_No items._",
                 "",
@@ -282,37 +403,35 @@ def render_report(report_date: dt.date, articles: list[Article], config: dict[st
         [
             f"- {len(selected)} relevant display-industry signals were collected from configured news feeds.",
             f"- Topic momentum is concentrated around {', '.join(top_topics[:5])}.",
+            f"- The report is organized by {len(section_mix)} active theme section(s): {'; '.join(section_mix)}.",
             "- Samsung Display relevance is scored from 0 to 100 using direct mentions, product overlap, and adjacent technology signals.",
             "",
-            "## Key News",
+            "## News by Theme",
             "",
         ]
     )
 
-    for index, article in enumerate(selected, start=1):
-        published = (
-            article.published.strftime("%Y-%m-%d %H:%M UTC")
-            if article.published
-            else "Unknown"
-        )
+    for section in config.get("report_sections", []):
+        section_articles = grouped.get(section["id"], [])
+        if not section_articles:
+            continue
+
         lines.extend(
             [
-                f"### {index}. [{article.title}]({article.link})",
+                f"### {section['title']}",
                 "",
-                "| Field | Detail |",
-                "| --- | --- |",
-                f"| Source | {md_cell(article.source)} |",
-                f"| Published | {md_cell(published)} |",
-                f"| Topics | {md_cell(', '.join(article.topics))} |",
-                f"| Industry relevance | {article.score} |",
-                f"| Samsung Display relevance | {article.samsung_display_score}/100 |",
-                f"| Summary | {md_cell(short_summary(article))} |",
-                f"| Original news | [Open article]({article.link}) |",
+                f"> {section['description']}",
                 "",
             ]
         )
+        for index, article in enumerate(section_articles, start=1):
+            lines.extend(render_article_card(index, article))
 
-    lines.extend(["## Topic View", ""])
+    lines.extend(["## Strategic Implications", ""])
+    lines.extend(strategic_implications(selected, grouped))
+    lines.append("")
+
+    lines.extend(["## Topic Mix", ""])
     for topic, count in topic_counts_with_numbers(selected):
         lines.append(f"- {topic}: {count}")
     lines.append("")
