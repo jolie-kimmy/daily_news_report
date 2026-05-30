@@ -20,6 +20,11 @@ try:
 except ImportError:  # pragma: no cover - handled with a clear runtime message
     yaml = None
 
+try:
+    from deep_translator import GoogleTranslator
+except ImportError:  # pragma: no cover - translation falls back gracefully
+    GoogleTranslator = None
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCES_PATH = ROOT / "sources.yaml"
@@ -30,10 +35,13 @@ DOCS_DIR = ROOT / "docs"
 @dataclass(frozen=True)
 class Article:
     title: str
+    title_ko: str
+    english_title: str | None
     link: str
     source: str
     published: dt.datetime | None
     summary: str
+    summary_ko: str
     topics: tuple[str, ...]
     score: int
     samsung_display_score: int
@@ -85,6 +93,88 @@ def normalize_title(title: str) -> str:
     return title.strip()
 
 
+def contains_hangul(text: str) -> bool:
+    return bool(re.search(r"[가-힣]", text))
+
+
+def is_english_like(text: str) -> bool:
+    letters = re.findall(r"[A-Za-z]", text)
+    if not letters or contains_hangul(text):
+        return False
+    return len(letters) >= max(8, len(text) * 0.25)
+
+
+TRANSLATION_GLOSSARY = [
+    ("Samsung Display", "삼성디스플레이"),
+    ("LG Display", "LG디스플레이"),
+    ("OLED", "OLED"),
+    ("QD-OLED", "QD-OLED"),
+    ("AMOLED", "AMOLED"),
+    ("microLED", "마이크로LED"),
+    ("MicroLED", "마이크로LED"),
+    ("Mini LED", "미니LED"),
+    ("display panel", "디스플레이 패널"),
+    ("monitor panel", "모니터 패널"),
+    ("TV panel", "TV 패널"),
+    ("automotive display", "차량용 디스플레이"),
+    ("foldable", "폴더블"),
+    ("flexible", "플렉서블"),
+    ("mass production", "양산"),
+    ("Mass-Produce", "양산"),
+    ("develops", "개발"),
+    ("Develops", "개발"),
+    ("unveils", "공개"),
+    ("Unveils", "공개"),
+    ("announces", "발표"),
+    ("sets new record", "신기록 수립"),
+    ("world's first", "세계 최초"),
+    ("World's First", "세계 최초"),
+    ("brighter and faster", "더 밝고 빨라짐"),
+    ("partner", "협력"),
+    ("partners", "협력"),
+    ("supply", "공급"),
+    ("screens", "스크린"),
+    ("panel", "패널"),
+    ("display", "디스플레이"),
+]
+
+
+def glossary_translate(text: str) -> str:
+    translated = text
+    for source, target in TRANSLATION_GLOSSARY:
+        translated = translated.replace(source, target)
+    return translated
+
+
+def make_translator() -> Any:
+    if GoogleTranslator is None:
+        return None
+    try:
+        return GoogleTranslator(source="auto", target="ko")
+    except Exception:
+        return None
+
+
+def translate_to_korean(text: str, translator: Any, cache: dict[str, str]) -> str:
+    text = clean_text(text)
+    if not text or contains_hangul(text):
+        return text
+    if text in cache:
+        return cache[text]
+
+    translated = ""
+    if translator is not None:
+        try:
+            translated = clean_text(translator.translate(text))
+        except Exception as exc:  # noqa: BLE001 - keep report generation resilient
+            print(f"Translation fallback used: {exc}", file=sys.stderr)
+
+    if not translated:
+        translated = glossary_translate(text)
+    cache[text] = translated
+    return translated
+
+
 def find_topics(text: str, topics: dict[str, list[str]]) -> tuple[str, ...]:
     matched: list[str] = []
     lowered = text.lower()
@@ -130,6 +220,8 @@ def parse_feed(
     data: bytes,
     config: dict[str, Any],
     report_date: dt.date,
+    translator: Any,
+    translation_cache: dict[str, str],
 ) -> list[Article]:
     try:
         root = ET.fromstring(data)
@@ -158,10 +250,17 @@ def parse_feed(
         articles.append(
             Article(
                 title=title,
+                title_ko=translate_to_korean(title, translator, translation_cache),
+                english_title=title if is_english_like(title) else None,
                 link=link,
                 source=feed_name,
                 published=published,
                 summary=summary,
+                summary_ko=translate_to_korean(
+                    short_text(summary),
+                    translator,
+                    translation_cache,
+                ),
                 topics=find_topics(combined, config["topics"]),
                 score=score,
                 samsung_display_score=score_samsung_display_relevance(
@@ -199,6 +298,8 @@ def is_in_report_window(
 
 def collect_articles(config: dict[str, Any], report_date: dt.date) -> list[Article]:
     by_title: dict[str, Article] = {}
+    translator = make_translator()
+    translation_cache: dict[str, str] = {}
 
     for feed in config["feeds"]:
         try:
@@ -207,7 +308,14 @@ def collect_articles(config: dict[str, Any], report_date: dt.date) -> list[Artic
             print(f"Skipping {feed['name']}: {exc}", file=sys.stderr)
             continue
 
-        for article in parse_feed(feed["name"], data, config, report_date):
+        for article in parse_feed(
+            feed["name"],
+            data,
+            config,
+            report_date,
+            translator,
+            translation_cache,
+        ):
             key = normalize_title(article.title)
             current = by_title.get(key)
             if current is None or article.score > current.score:
@@ -223,15 +331,19 @@ def collect_articles(config: dict[str, Any], report_date: dt.date) -> list[Artic
     )
 
 
-def short_summary(article: Article) -> str:
-    source_suffix = f" ({article.source})"
-    text = article.summary
-    if not text:
-        return f"Related display-industry item from{source_suffix}."
-    text = re.sub(r"\s+", " ", text)
+def short_text(text: str) -> str:
+    text = re.sub(r"\s+", " ", text or "").strip()
     if len(text) > 240:
         text = text[:237].rsplit(" ", 1)[0] + "..."
     return text
+
+
+def short_summary(article: Article) -> str:
+    source_suffix = f" ({article.source})"
+    text = article.summary_ko or article.summary
+    if not text:
+        return f"{source_suffix}에서 수집한 디스플레이 산업 관련 기사입니다."
+    return short_text(text)
 
 
 def md_cell(value: object) -> str:
@@ -309,26 +421,40 @@ def section_counts(grouped: dict[str, list[Article]], config: dict[str, Any]) ->
     return labels
 
 
+def section_title(section: dict[str, Any]) -> str:
+    subtitle = section.get("subtitle")
+    if subtitle:
+        return f"{section['title']} ({subtitle})"
+    return section["title"]
+
+
 def render_article_card(index: int, article: Article) -> list[str]:
     published = (
         article.published.strftime("%Y-%m-%d %H:%M UTC")
         if article.published
         else "Unknown"
     )
-    return [
-        f"#### {index}. [{md_link_text(article.title)}]({article.link})",
+    lines = [
+        f"#### {index}. [{md_link_text(article.title_ko)}]({article.link})",
         "",
-        "| Field | Detail |",
+        "| 항목 | 내용 |",
         "| --- | --- |",
-        f"| Source | {md_cell(article.source)} |",
-        f"| Published | {md_cell(published)} |",
-        f"| Topics | {md_cell(', '.join(article.topics))} |",
-        f"| Industry relevance | {article.score} |",
-        f"| Samsung Display relevance | {article.samsung_display_score}/100 |",
-        f"| Summary | {md_cell(short_summary(article))} |",
-        f"| Original news | [Open article]({article.link}) |",
-        "",
+        f"| 출처 | {md_cell(article.source)} |",
+        f"| 발행일 | {md_cell(published)} |",
+        f"| 주제 | {md_cell(', '.join(article.topics))} |",
+        f"| 산업 연관성 | {article.score} |",
+        f"| 삼성디스플레이 연관성 | {article.samsung_display_score}/100 |",
     ]
+    if article.english_title:
+        lines.append(f"| English title | {md_cell(article.english_title)} |")
+    lines.extend(
+        [
+            f"| 요약 | {md_cell(short_summary(article))} |",
+            f"| 원문 | [기사 열기]({article.link}) |",
+            "",
+        ]
+    )
+    return lines
 
 
 def strategic_implications(selected: list[Article], grouped: dict[str, list[Article]]) -> list[str]:
@@ -338,22 +464,22 @@ def strategic_implications(selected: list[Article], grouped: dict[str, list[Arti
     high_samsung = sum(1 for article in selected if article.samsung_display_score >= 70)
 
     implications = [
-        f"- Samsung Display appears directly or strongly in {high_samsung} tracked article(s), making it the primary focus lens for this report.",
+        f"- 삼성디스플레이가 직접 또는 강하게 연관된 기사는 {high_samsung}건입니다.",
     ]
     if competitor_count:
         implications.append(
-            f"- Competitor activity appears in {competitor_count} article(s), so pricing, product launches, and capacity moves should be watched closely."
+            f"- 경쟁사 관련 기사는 {competitor_count}건으로, 가격/제품 출시/생산능력 변화 추적이 필요합니다."
         )
     if technology_count:
         implications.append(
-            f"- Technology momentum appears in {technology_count} article(s), especially around OLED, QD-OLED, microLED, Mini LED, and refresh-rate differentiation."
+            f"- 기술 관련 기사는 {technology_count}건이며 OLED, QD-OLED, microLED, Mini LED, 고주사율 차별화 흐름을 확인해야 합니다."
         )
     if samsung_count == 0:
         implications.append(
-            "- No direct Samsung Display section items were found, so indirect market and technology signals deserve closer review."
+            "- 삼성디스플레이 직접 관련 기사가 없으므로 시장/기술 간접 신호를 더 주의 깊게 확인해야 합니다."
         )
     implications.append(
-        "- Follow-up tracking should prioritize articles with high Samsung Display relevance and customer or competitor overlap."
+        "- 후속 모니터링은 삼성디스플레이 연관성이 높고 고객사 또는 경쟁사 이슈와 겹치는 기사에 우선순위를 두는 것이 좋습니다."
     )
     return implications
 
@@ -369,21 +495,21 @@ def render_report(report_date: dt.date, articles: list[Article], config: dict[st
     lines = [
         f"# {config['report']['title']}",
         "",
-        "> Display technology intelligence brief focused on market signals, product moves, and Samsung Display relevance.",
+        f"> {config['report'].get('subtitle', 'Display Weekly Report')} | 디스플레이 산업 뉴스와 삼성디스플레이 연관성 중심 리포트입니다.",
         "",
-        f"**Report date:** `{report_date.isoformat()}` | **Generated:** `{generated_at}`",
+        f"**리포트 날짜:** `{report_date.isoformat()}` | **생성 시각:** `{generated_at}`",
         "",
-        "## Signal Dashboard",
+        "## 시그널 대시보드",
         "",
-        "| Signal | Value |",
+        "| 항목 | 값 |",
         "| --- | --- |",
-        f"| Coverage window | Last {int(config['report'].get('lookback_days', 7))} days |",
-        f"| Articles tracked | {len(selected)} |",
-        f"| Main topics | {md_cell(', '.join(top_topics[:5]) if top_topics else 'None')} |",
-        f"| Section mix | {md_cell('; '.join(section_mix) if section_mix else 'None')} |",
-        f"| Focus lens | Samsung Display relevance |",
+        f"| 수집 기간 | 최근 {int(config['report'].get('lookback_days', 7))}일 |",
+        f"| 추적 기사 수 | {len(selected)} |",
+        f"| 주요 주제 | {md_cell(', '.join(top_topics[:5]) if top_topics else '없음')} |",
+        f"| 섹션 구성 | {md_cell('; '.join(section_mix) if section_mix else '없음')} |",
+        f"| 분석 관점 | 삼성디스플레이 연관성 |",
         "",
-        "## Executive Summary",
+        "## 요약",
         "",
     ]
 
@@ -392,9 +518,9 @@ def render_report(report_date: dt.date, articles: list[Article], config: dict[st
             [
                 "- No matching display-industry news items were found today.",
                 "",
-                "## News by Theme",
+                "## 주제별 뉴스",
                 "",
-                "_No items._",
+                "_수집된 기사가 없습니다._",
                 "",
             ]
         )
@@ -402,12 +528,12 @@ def render_report(report_date: dt.date, articles: list[Article], config: dict[st
 
     lines.extend(
         [
-            f"- {len(selected)} relevant display-industry signals were collected from configured news feeds.",
-            f"- Topic momentum is concentrated around {', '.join(top_topics[:5])}.",
-            f"- The report is organized by {len(section_mix)} active theme section(s): {'; '.join(section_mix)}.",
-            "- Samsung Display relevance is scored from 0 to 100 using direct mentions, product overlap, and adjacent technology signals.",
+            f"- 설정된 뉴스 피드에서 디스플레이 산업 관련 기사 {len(selected)}건을 수집했습니다.",
+            f"- 주요 관심 주제는 {', '.join(top_topics[:5])}입니다.",
+            f"- 이번 리포트는 {len(section_mix)}개 활성 섹션으로 구성됩니다: {'; '.join(section_mix)}.",
+            "- 삼성디스플레이 연관성은 직접 언급, 제품/기술 중첩, 인접 기술 신호를 기준으로 0~100점으로 산정합니다.",
             "",
-            "## News by Theme",
+            "## 주제별 뉴스",
             "",
         ]
     )
@@ -419,7 +545,7 @@ def render_report(report_date: dt.date, articles: list[Article], config: dict[st
 
         lines.extend(
             [
-                f"### {section['title']}",
+                f"### {section_title(section)}",
                 "",
                 f"> {section['description']}",
                 "",
@@ -428,11 +554,11 @@ def render_report(report_date: dt.date, articles: list[Article], config: dict[st
         for index, article in enumerate(section_articles, start=1):
             lines.extend(render_article_card(index, article))
 
-    lines.extend(["## Strategic Implications", ""])
+    lines.extend(["## 전략적 시사점", ""])
     lines.extend(strategic_implications(selected, grouped))
     lines.append("")
 
-    lines.extend(["## Topic Mix", ""])
+    lines.extend(["## 주제 믹스", ""])
     for topic, count in topic_counts_with_numbers(selected):
         lines.append(f"- {topic}: {count}")
     lines.append("")
@@ -446,7 +572,7 @@ def html_escape(value: object) -> str:
 
 def render_score(score: int) -> str:
     return f"""
-    <div class="score" aria-label="Samsung Display relevance {score} out of 100">
+    <div class="score" aria-label="삼성디스플레이 연관성 {score}점">
       <span>{score}</span>
       <small>/100</small>
     </div>
@@ -460,18 +586,22 @@ def render_html_article(article: Article) -> str:
         else "Unknown"
     )
     topics = "".join(f"<span>{html_escape(topic)}</span>" for topic in article.topics)
+    english_title = ""
+    if article.english_title:
+        english_title = f'<p class="english-title">English title: {html_escape(article.english_title)}</p>'
     return f"""
       <article class="news-card">
         <div class="news-topline">
           <div class="topic-pills">{topics}</div>
           {render_score(article.samsung_display_score)}
         </div>
-        <h3><a href="{html_escape(article.link)}" target="_blank" rel="noreferrer">{html_escape(article.title)}</a></h3>
+        <h3><a href="{html_escape(article.link)}" target="_blank" rel="noreferrer">{html_escape(article.title_ko)}</a></h3>
+        {english_title}
         <p>{html_escape(short_summary(article))}</p>
         <dl>
-          <div><dt>Source</dt><dd>{html_escape(article.source)}</dd></div>
-          <div><dt>Published</dt><dd>{html_escape(published)}</dd></div>
-          <div><dt>Industry relevance</dt><dd>{article.score}</dd></div>
+          <div><dt>출처</dt><dd>{html_escape(article.source)}</dd></div>
+          <div><dt>발행일</dt><dd>{html_escape(published)}</dd></div>
+          <div><dt>산업 연관성</dt><dd>{article.score}</dd></div>
         </dl>
       </article>
     """
@@ -496,7 +626,7 @@ def render_html_report(report_date: dt.date, articles: list[Article], config: di
             <section class="theme-section">
               <div class="section-heading">
                 <p>{html_escape(section['description'])}</p>
-                <h2>{html_escape(section['title'])}</h2>
+                <h2>{html_escape(section_title(section))}</h2>
               </div>
               <div class="news-grid">{cards}</div>
             </section>
@@ -509,7 +639,7 @@ def render_html_report(report_date: dt.date, articles: list[Article], config: di
     )
 
     return f"""<!doctype html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -531,7 +661,7 @@ def render_html_report(report_date: dt.date, articles: list[Article], config: di
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: Inter, "Noto Sans KR", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: radial-gradient(circle at 25% 0%, rgba(73, 116, 255, 0.22), transparent 34%),
         radial-gradient(circle at 82% 12%, rgba(255, 122, 217, 0.12), transparent 30%),
         var(--bg);
@@ -612,6 +742,7 @@ def render_html_report(report_date: dt.date, articles: list[Article], config: di
     .news-card h3 {{ margin: 16px 0 10px; font-size: 19px; line-height: 1.35; }}
     .news-card h3 a {{ text-decoration: none; }}
     .news-card h3 a:hover {{ color: var(--cyan); }}
+    .english-title {{ color: var(--muted); font-size: 13px; line-height: 1.5; margin: 0 0 10px; }}
     .news-card p {{ color: #c8d5e6; line-height: 1.6; }}
     dl {{ display: grid; gap: 8px; margin: 18px 0 0; }}
     dl div {{ display: flex; justify-content: space-between; gap: 16px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; }}
@@ -630,12 +761,12 @@ def render_html_report(report_date: dt.date, articles: list[Article], config: di
     <div class="hero-inner">
       <div class="eyebrow">Display Intelligence</div>
       <h1>{html_escape(config['report']['title'])}</h1>
-      <p>Market signals, customer moves, competitor activity, and technology developments organized through a Samsung Display relevance lens.</p>
+      <p>시장동향, 고객사 움직임, 경쟁사 활동, 기술 변화를 삼성디스플레이 연관성 관점으로 정리한 주간 디스플레이 산업 리포트입니다.</p>
       <div class="dashboard">
-        <div class="metric"><span>Report date</span><strong>{report_date.isoformat()}</strong></div>
-        <div class="metric"><span>Articles tracked</span><strong>{len(selected)}</strong></div>
-        <div class="metric"><span>Main topics</span><strong>{html_escape(', '.join(top_topics[:2]) if top_topics else 'None')}</strong></div>
-        <div class="metric"><span>Generated</span><strong>{html_escape(generated_at)}</strong></div>
+        <div class="metric"><span>리포트 날짜</span><strong>{report_date.isoformat()}</strong></div>
+        <div class="metric"><span>추적 기사 수</span><strong>{len(selected)}</strong></div>
+        <div class="metric"><span>주요 주제</span><strong>{html_escape(', '.join(top_topics[:2]) if top_topics else '없음')}</strong></div>
+        <div class="metric"><span>생성 시각</span><strong>{html_escape(generated_at)}</strong></div>
       </div>
     </div>
   </header>
@@ -643,25 +774,25 @@ def render_html_report(report_date: dt.date, articles: list[Article], config: di
     <section class="summary">
       <div class="section-heading">
         <p>Signal Dashboard</p>
-        <h2>Executive Summary</h2>
+        <h2>요약</h2>
       </div>
       <ul>
-        <li>{len(selected)} relevant display-industry signals were collected from configured feeds.</li>
-        <li>Active sections: {html_escape('; '.join(section_mix) if section_mix else 'None')}.</li>
-        <li>Samsung Display relevance is scored from 0 to 100 using direct mentions, product overlap, and adjacent technology signals.</li>
+        <li>설정된 뉴스 피드에서 디스플레이 산업 관련 기사 {len(selected)}건을 수집했습니다.</li>
+        <li>활성 섹션: {html_escape('; '.join(section_mix) if section_mix else '없음')}.</li>
+        <li>삼성디스플레이 연관성은 직접 언급, 제품/기술 중첩, 인접 기술 신호를 기준으로 0~100점으로 산정합니다.</li>
       </ul>
     </section>
     {''.join(section_blocks)}
     <section class="theme-section implications">
       <div class="section-heading">
         <p>Decision Lens</p>
-        <h2>Strategic Implications</h2>
+        <h2>전략적 시사점</h2>
       </div>
       <ul>{implications}</ul>
     </section>
   </main>
   <footer>
-    <main>Generated from RSS feeds. Open each source link before making business or investment decisions.</main>
+    <main>RSS 피드 기반으로 생성된 리포트입니다. 사업 또는 투자 판단 전 원문 링크를 반드시 확인하세요.</main>
   </footer>
 </body>
 </html>

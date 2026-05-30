@@ -17,6 +17,8 @@ The first version focuses on:
 - Samsung Display relevance scoring for each collected article
 - Thematic grouping by Samsung Display focus, market trends, customers,
   competitors, technology, and supply chain signals
+- Korean-first output with the original English title preserved when the source
+  headline is in English
 
 ## Repository Layout
 

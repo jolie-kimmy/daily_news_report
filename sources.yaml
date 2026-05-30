@@ -1,5 +1,6 @@
 report:
-  title: Display Weekly Report
+  title: 디스플레이 위클리 리포트
+  subtitle: Display Weekly Report
   timezone: Asia/Seoul
   max_items: 25
   lookback_days: 7
@@ -23,8 +24,9 @@ samsung_display_relevance:
 
 report_sections:
   - id: samsung_display_focus
-    title: Samsung Display Focus
-    description: Direct Samsung Display mentions and closely related product or technology signals.
+    title: 삼성디스플레이 포커스
+    subtitle: Samsung Display Focus
+    description: 삼성디스플레이 직접 언급 및 관련 제품/기술 신호입니다.
     keywords:
       - Samsung Display
       - Samsung's display
@@ -33,8 +35,9 @@ report_sections:
       - QD-OLED
       - Galaxy display
   - id: market_trends
-    title: Market Trends
-    description: Panel pricing, demand, supply, shipments, capacity, and investment cycle signals.
+    title: 시장동향
+    subtitle: Market Trends
+    description: 패널 가격, 수요/공급, 출하량, 생산능력, 투자 사이클 관련 신호입니다.
     keywords:
       - price
       - prices
@@ -50,8 +53,9 @@ report_sections:
       - investment
       - inventory
   - id: customer_oem_signals
-    title: Customer & OEM Signals
-    description: Customer, device brand, set maker, and automotive OEM adoption signals.
+    title: 고객사 및 OEM 동향
+    subtitle: Customer & OEM Signals
+    description: 고객사, 세트업체, 디바이스 브랜드, 자동차 OEM 채택 관련 신호입니다.
     keywords:
       - Apple
       - Samsung Electronics
@@ -65,8 +69,9 @@ report_sections:
       - cockpit
       - Galaxy
   - id: competitor_moves
-    title: Competitor Moves
-    description: Activity from competing panel makers and adjacent display manufacturers.
+    title: 경쟁사 동향
+    subtitle: Competitor Moves
+    description: 경쟁 패널 업체와 인접 디스플레이 제조사의 움직임입니다.
     keywords:
       - LG Display
       - BOE
@@ -80,8 +85,9 @@ report_sections:
       - Sharp
       - E Ink
   - id: technology_watch
-    title: Technology Watch
-    description: OLED, QD-OLED, microLED, Mini LED, backplane, foldable, and performance technology updates.
+    title: 기술동향
+    subtitle: Technology Watch
+    description: OLED, QD-OLED, microLED, Mini LED, 백플레인, 폴더블, 성능 개선 기술 업데이트입니다.
     keywords:
       - OLED
       - QD-OLED
@@ -99,8 +105,9 @@ report_sections:
       - 360Hz
       - 240Hz
   - id: materials_equipment_supply_chain
-    title: Materials, Equipment & Supply Chain
-    description: Materials, equipment, fab, substrate, driver IC, and supply chain developments.
+    title: 소재/장비/공급망
+    subtitle: Materials, Equipment & Supply Chain
+    description: 소재, 장비, 팹, 기판, 드라이버 IC, 공급망 관련 동향입니다.
     keywords:
       - material
       - materials
