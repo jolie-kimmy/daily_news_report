@@ -588,6 +588,39 @@ def has_any(articles: list[Article], terms: list[str]) -> bool:
     return any(term.lower() in text for term in terms)
 
 
+APPLICATION_TOPICS = {
+    "Phone",
+    "Tablet & Foldable",
+    "Watch & Wearables",
+    "Gaming",
+    "Note PC",
+    "Automotive",
+    "Monitor",
+    "TV",
+    "XR & Spatial Computing",
+    "Digital Signage",
+    "Home Appliances",
+    "Retail & Kiosk",
+    "Medical & Healthcare",
+    "Industrial & Robotics",
+    "AI Devices",
+    "Mobility & Transportation",
+    "Public Infrastructure",
+    "Education & Collaboration",
+    "E-Paper & Low Power",
+    "Defense & Rugged",
+}
+
+
+def application_topic_counts(articles: list[Article]) -> list[tuple[str, int]]:
+    counts: dict[str, int] = {}
+    for article in articles:
+        for topic in article.topics:
+            if topic in APPLICATION_TOPICS:
+                counts[topic] = counts.get(topic, 0) + 1
+    return sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+
+
 def executive_summary(selected: list[Article], grouped: dict[str, list[Article]]) -> list[str]:
     bullets: list[str] = []
     samsung_articles = grouped.get("samsung_display_focus", [])
@@ -595,10 +628,17 @@ def executive_summary(selected: list[Article], grouped: dict[str, list[Article]]
     competitor_articles = grouped.get("competitor_moves", [])
     tech_articles = grouped.get("technology_watch", [])
     supply_articles = grouped.get("materials_equipment_supply_chain", [])
+    app_counts = application_topic_counts(selected)
+    app_mix = ", ".join(f"{name} {count}건" for name, count in app_counts[:5])
 
-    if has_any(samsung_articles, ["QD-OLED", "360Hz", "4K"]):
+    if app_mix:
         bullets.append(
-            "삼성디스플레이 관련 뉴스의 핵심은 4K 360Hz QD-OLED 모니터 패널입니다. 프리미엄 게이밍/IT 디스플레이에서 고주사율과 고해상도 경쟁이 본격화되는 흐름으로 볼 수 있습니다."
+            f"오늘 디스플레이 뉴스는 {app_mix} 중심으로 분포합니다. 단일 패널 기술보다 응용처별 채택 속도와 고객 수요가 더 중요하게 읽히는 시황입니다."
+        )
+
+    if has_any(samsung_articles + customer_articles, ["QD-OLED", "360Hz", "4K"]):
+        bullets.append(
+            "삼성디스플레이 4K 360Hz QD-OLED 모니터 이슈는 프리미엄 게이밍/모니터 시장에서 고주사율, 고해상도, 밝기 경쟁이 동시에 강화되고 있음을 보여줍니다."
         )
     elif samsung_articles:
         bullets.append(
@@ -606,19 +646,20 @@ def executive_summary(selected: list[Article], grouped: dict[str, list[Article]]
         )
 
     if customer_articles:
+        customer_titles = "; ".join(article.title_ko for article in customer_articles[:3])
         bullets.append(
-            f"고객사 관점에서는 '{customer_articles[0].title_ko}'가 주요 신호입니다. 차량용/프리미엄 세트 시장에서 OLED 채택 확대 가능성을 보여줍니다."
+            f"고객사/응용처 측면에서는 {customer_titles}가 핵심입니다. Ferrari 차량용 OLED, Galaxy 패널, 게이밍 모니터, TV/노트북 등으로 OLED 수요처가 넓어지는 흐름입니다."
         )
 
     competitors = company_mentions(competitor_articles, exclude={"Samsung Display"})
     if competitors:
         bullets.append(
-            f"경쟁사 측면에서는 {', '.join(competitors)} 관련 움직임이 확인됩니다. 특히 OLED 양산, microLED 협력, 패널 수주 경쟁이 삼성디스플레이의 가격 및 고객 대응 전략에 영향을 줄 수 있습니다."
+            f"경쟁사 측면에서는 {', '.join(competitors)} 움직임이 확인됩니다. BOE의 Galaxy 패널 가격 공세와 LG Display의 OLED 모니터 양산은 삼성디스플레이의 모바일/IT 고객 방어와 가격 전략에 직접 부담이 됩니다."
         )
 
     if has_any(tech_articles + supply_articles, ["microLED", "MicroLED", "module", "factory"]):
         bullets.append(
-            "기술/공급망에서는 microLED 모듈, 생산 기반, 차세대 디스플레이 협력 이슈가 관찰됩니다. 단기 매출보다는 중장기 기술 포트폴리오와 투자 방향을 점검할 신호입니다."
+            "기술 흐름에서는 microLED와 고성능 OLED 모니터 신호가 함께 관찰됩니다. 단기적으로는 OLED 수익화, 중장기적으로는 microLED/XR/웨어러블 등 차세대 응용처 대응이 중요합니다."
         )
 
     if not bullets and selected:
@@ -702,32 +743,42 @@ def render_article_card(index: int, article: Article) -> list[str]:
 
 
 def strategic_implications(selected: list[Article], grouped: dict[str, list[Article]]) -> list[str]:
-    competitor_count = len(grouped.get("competitor_moves", []))
-    customer_count = len(grouped.get("customer_oem_signals", []))
-    samsung_articles = grouped.get("samsung_display_focus", [])
+    competitor_articles = grouped.get("competitor_moves", [])
     tech_and_supply = grouped.get("technology_watch", []) + grouped.get(
         "materials_equipment_supply_chain",
         [],
     )
+    app_names = {name for name, _ in application_topic_counts(selected)}
 
-    implications = [
-        "- QD-OLED 모니터 관련 신호가 반복되는 만큼, 삼성디스플레이는 프리미엄 모니터 시장에서 고주사율과 고해상도 차별화를 더 강하게 밀어붙일 수 있습니다.",
-    ]
-    if customer_count:
+    implications: list[str] = []
+    if {"Monitor", "Gaming"} & app_names:
         implications.append(
-            "- Ferrari EV AMOLED와 같은 고객사 신호는 삼성디스플레이의 OLED 포트폴리오가 모바일/IT를 넘어 프리미엄 차량용 디스플레이로 확장될 수 있음을 보여줍니다."
+            "- 게이밍 모니터와 프리미엄 모니터 기사가 많다는 것은 QD-OLED의 현재 수익화 창구가 IT/게이밍 쪽에 열려 있다는 뜻입니다. 삼성디스플레이는 4K 360Hz, 밝기, 번인 저감, 고객사 디자인인 확보를 묶어서 프리미엄 모니터 포지션을 방어해야 합니다."
         )
-    if competitor_count:
+    if "Automotive" in app_names:
         implications.append(
-            "- LG Display, BOE, AUO 등 경쟁사의 OLED 생산, microLED 협력, 수주 경쟁 움직임이 확인됩니다. 삼성디스플레이는 기술 우위뿐 아니라 고객 락인과 가격 방어 전략을 함께 강화할 필요가 있습니다."
+            "- Ferrari와 자동차 디스플레이 시장 뉴스는 차량용 OLED가 브랜드 차별화 부품으로 올라오고 있음을 보여줍니다. 삼성디스플레이는 신뢰성, 장수명, 곡면/대형 cockpit 레퍼런스를 앞세워 차량용 고객 파이프라인을 키울 필요가 있습니다."
+        )
+    if "Phone" in app_names:
+        implications.append(
+            "- BOE의 Galaxy S27 패널 가격 공세는 모바일 OLED에서 가격 압박이 계속된다는 신호입니다. 삼성디스플레이는 단순 단가 경쟁보다 LTPO, 전력 효율, 박형화, 품질 안정성 같은 차별 요소로 플래그십 물량을 지키는 전략이 필요합니다."
+        )
+    if {"TV", "Note PC", "Tablet & Foldable", "XR & Spatial Computing"} & app_names:
+        implications.append(
+            "- TV, 노트 PC, XR/공간컴퓨팅 등 중대형/신규 폼팩터 응용처는 OLED와 Mini LED, microLED가 동시에 경쟁하는 영역입니다. 삼성디스플레이는 QD-OLED 중심의 프리미엄 전략과 IT OLED 확대 전략을 분리해서 봐야 합니다."
+        )
+    if competitor_articles:
+        competitors = company_mentions(competitor_articles, exclude={"Samsung Display"})
+        implications.append(
+            f"- 경쟁사 신호({', '.join(competitors) if competitors else '주요 패널 업체'})는 모바일 가격 공세와 IT OLED 양산 확대로 나타납니다. 삼성디스플레이는 고객별 장기 공급 계약, 제품 세대 전환 속도, 원가 개선을 함께 관리해야 합니다."
         )
     if tech_and_supply:
         implications.append(
-            "- microLED와 모듈 생산 관련 뉴스는 단기 매출보다 장기 기술 선택지로서 의미가 큽니다. 삼성디스플레이는 QD-OLED 수익화와 차세대 기술 탐색 사이의 균형을 잡아야 합니다."
+            "- microLED와 고성능 OLED 관련 기술 뉴스는 아직 단기 매출보다 옵션 가치가 큽니다. 다만 Watch, XR, 산업용/AI 기기 같은 신규 응용처에서 기술 선택이 빨라질 수 있어 선행 고객 PoC를 꾸준히 확보해야 합니다."
         )
-    if not samsung_articles:
-        implications[0] = (
-            "- 삼성디스플레이 직접 뉴스가 적더라도 고객사, 경쟁사, 기술 신호는 수요 변화와 차별화 압력을 읽는 지표로 계속 추적해야 합니다."
+    if not implications:
+        implications.append(
+            "- 오늘 뉴스는 특정 대형 이벤트보다 응용처별 수요 신호를 넓게 확인하는 성격입니다. 삼성디스플레이는 직접 언급 기사뿐 아니라 고객사와 경쟁사 뉴스를 통해 다음 수요처를 추적해야 합니다."
         )
     return implications
 
@@ -739,14 +790,13 @@ def render_report(report_date: dt.date, articles: list[Article], config: dict[st
     grouped = group_articles_by_section(selected, config) if selected else {}
     section_mix = section_counts(grouped, config) if selected else []
 
+    subtitle = str(config["report"].get("subtitle", "")).strip()
     lines = [
         f"# {config['report']['title']}",
         "",
-        f"> {config['report'].get('subtitle', '디스플레이 산업 뉴스와 삼성디스플레이 연관성 중심 리포트')}",
-        "",
         f"**리포트 날짜:** `{report_date.isoformat()}` | **생성 시각:** `{generated_at}`",
         "",
-        "## Signal Dashboard",
+        "## Market Snapshot",
         "",
         "| 지표 | 값 |",
         "| --- | --- |",
@@ -760,6 +810,8 @@ def render_report(report_date: dt.date, articles: list[Article], config: dict[st
         "## Executive Summary",
         "",
     ]
+    if subtitle:
+        lines[2:2] = [f"> {subtitle}", ""]
 
     if not selected:
         lines.extend(
@@ -1035,7 +1087,6 @@ def render_html_report(report_date: dt.date, articles: list[Article], config: di
     <div class="hero-inner">
       <div class="eyebrow">Display Intelligence</div>
       <h1>{html_escape(config['report']['title'])}</h1>
-      <p>시장, 고객사, 경쟁사, 기술 흐름을 삼성디스플레이 관점에서 읽는 디스플레이 산업 리포트입니다.</p>
       <div class="dashboard">
         <div class="metric"><span>리포트 날짜</span><strong>{report_date.isoformat()}</strong></div>
         <div class="metric"><span>추적 기사 수</span><strong>{len(selected)}</strong></div>
@@ -1049,7 +1100,6 @@ def render_html_report(report_date: dt.date, articles: list[Article], config: di
     <section class="summary">
       <div class="section-heading">
         <h2>Executive Summary</h2>
-        <p>Signal Dashboard</p>
       </div>
       <ul>
         {''.join(f'<li>{html_escape(item.removeprefix("- "))}</li>' for item in executive_summary(selected, grouped))}
@@ -1059,7 +1109,6 @@ def render_html_report(report_date: dt.date, articles: list[Article], config: di
     <section class="theme-section implications">
       <div class="section-heading">
         <h2>Strategic Implications</h2>
-        <p>Decision Lens</p>
       </div>
       <ul>{implications}</ul>
     </section>

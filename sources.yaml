@@ -1,6 +1,6 @@
 report:
   title: Display Weekly Report
-  subtitle: 디스플레이 산업 뉴스와 삼성디스플레이 연관성 중심 리포트
+  subtitle: ""
   timezone: Asia/Seoul
   max_items: 25
   lookback_days: 7
