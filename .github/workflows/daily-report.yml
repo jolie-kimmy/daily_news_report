@@ -32,4 +32,4 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Add daily display news report"
-          file_pattern: reports/*.md
+          file_pattern: reports/*.md docs/index.html

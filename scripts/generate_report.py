@@ -24,6 +24,7 @@ except ImportError:  # pragma: no cover - handled with a clear runtime message
 ROOT = Path(__file__).resolve().parents[1]
 SOURCES_PATH = ROOT / "sources.yaml"
 REPORTS_DIR = ROOT / "reports"
+DOCS_DIR = ROOT / "docs"
 
 
 @dataclass(frozen=True)
@@ -439,6 +440,234 @@ def render_report(report_date: dt.date, articles: list[Article], config: dict[st
     return "\n".join(lines)
 
 
+def html_escape(value: object) -> str:
+    return html.escape(str(value), quote=True)
+
+
+def render_score(score: int) -> str:
+    return f"""
+    <div class="score" aria-label="Samsung Display relevance {score} out of 100">
+      <span>{score}</span>
+      <small>/100</small>
+    </div>
+    """
+
+
+def render_html_article(article: Article) -> str:
+    published = (
+        article.published.strftime("%Y-%m-%d %H:%M UTC")
+        if article.published
+        else "Unknown"
+    )
+    topics = "".join(f"<span>{html_escape(topic)}</span>" for topic in article.topics)
+    return f"""
+      <article class="news-card">
+        <div class="news-topline">
+          <div class="topic-pills">{topics}</div>
+          {render_score(article.samsung_display_score)}
+        </div>
+        <h3><a href="{html_escape(article.link)}" target="_blank" rel="noreferrer">{html_escape(article.title)}</a></h3>
+        <p>{html_escape(short_summary(article))}</p>
+        <dl>
+          <div><dt>Source</dt><dd>{html_escape(article.source)}</dd></div>
+          <div><dt>Published</dt><dd>{html_escape(published)}</dd></div>
+          <div><dt>Industry relevance</dt><dd>{article.score}</dd></div>
+        </dl>
+      </article>
+    """
+
+
+def render_html_report(report_date: dt.date, articles: list[Article], config: dict[str, Any]) -> str:
+    max_items = int(config["report"].get("max_items", 25))
+    selected = articles[:max_items]
+    grouped = group_articles_by_section(selected, config) if selected else {}
+    section_mix = section_counts(grouped, config) if selected else []
+    top_topics = topic_counts(selected) if selected else []
+    generated_at = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+    section_blocks: list[str] = []
+    for section in config.get("report_sections", []):
+        section_articles = grouped.get(section["id"], [])
+        if not section_articles:
+            continue
+        cards = "\n".join(render_html_article(article) for article in section_articles)
+        section_blocks.append(
+            f"""
+            <section class="theme-section">
+              <div class="section-heading">
+                <p>{html_escape(section['description'])}</p>
+                <h2>{html_escape(section['title'])}</h2>
+              </div>
+              <div class="news-grid">{cards}</div>
+            </section>
+            """
+        )
+
+    implications = "\n".join(
+        f"<li>{html_escape(item.removeprefix('- '))}</li>"
+        for item in strategic_implications(selected, grouped)
+    )
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{html_escape(config['report']['title'])}</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #070a10;
+      --panel: rgba(15, 22, 34, 0.78);
+      --panel-strong: rgba(22, 31, 48, 0.92);
+      --line: rgba(134, 194, 255, 0.2);
+      --text: #eef6ff;
+      --muted: #9fb1c7;
+      --cyan: #6ee7ff;
+      --blue: #7aa8ff;
+      --magenta: #ff7ad9;
+      --green: #9cffc7;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at 25% 0%, rgba(73, 116, 255, 0.22), transparent 34%),
+        radial-gradient(circle at 82% 12%, rgba(255, 122, 217, 0.12), transparent 30%),
+        var(--bg);
+      color: var(--text);
+    }}
+    a {{ color: inherit; }}
+    .hero {{
+      min-height: 560px;
+      display: grid;
+      align-items: end;
+      background-image: linear-gradient(90deg, rgba(7, 10, 16, 0.96), rgba(7, 10, 16, 0.72) 42%, rgba(7, 10, 16, 0.15)),
+        url("assets/display-hero.png");
+      background-size: cover;
+      background-position: center;
+      border-bottom: 1px solid var(--line);
+    }}
+    .hero-inner, main {{ width: min(1180px, calc(100% - 40px)); margin: 0 auto; }}
+    .hero-inner {{ padding: 72px 0 54px; }}
+    .eyebrow {{
+      color: var(--cyan);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }}
+    h1 {{ margin: 12px 0 18px; font-size: clamp(42px, 8vw, 88px); line-height: 0.95; letter-spacing: 0; max-width: 760px; }}
+    .hero p {{ max-width: 660px; color: #c7d8ed; font-size: 18px; line-height: 1.65; }}
+    .dashboard {{
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 34px;
+    }}
+    .metric {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      backdrop-filter: blur(14px);
+    }}
+    .metric span {{ display: block; color: var(--muted); font-size: 12px; }}
+    .metric strong {{ display: block; margin-top: 8px; font-size: 22px; }}
+    main {{ padding: 42px 0 72px; }}
+    .summary, .theme-section {{
+      border-top: 1px solid var(--line);
+      padding-top: 28px;
+      margin-top: 30px;
+    }}
+    .summary ul, .implications ul {{ margin: 0; padding-left: 20px; color: #c9d8ea; line-height: 1.7; }}
+    .section-heading {{ margin-bottom: 18px; }}
+    .section-heading p {{ color: var(--cyan); margin: 0 0 8px; font-size: 14px; }}
+    h2 {{ margin: 0; font-size: 28px; }}
+    .news-grid {{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }}
+    .news-card {{
+      background: var(--panel-strong);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.25);
+    }}
+    .news-topline {{ display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }}
+    .topic-pills {{ display: flex; flex-wrap: wrap; gap: 6px; }}
+    .topic-pills span {{
+      border: 1px solid rgba(110, 231, 255, 0.28);
+      color: #bfefff;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 12px;
+    }}
+    .score {{
+      min-width: 68px;
+      text-align: right;
+      color: var(--green);
+      font-weight: 800;
+    }}
+    .score span {{ font-size: 24px; }}
+    .score small {{ color: var(--muted); }}
+    .news-card h3 {{ margin: 16px 0 10px; font-size: 19px; line-height: 1.35; }}
+    .news-card h3 a {{ text-decoration: none; }}
+    .news-card h3 a:hover {{ color: var(--cyan); }}
+    .news-card p {{ color: #c8d5e6; line-height: 1.6; }}
+    dl {{ display: grid; gap: 8px; margin: 18px 0 0; }}
+    dl div {{ display: flex; justify-content: space-between; gap: 16px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; }}
+    dt {{ color: var(--muted); }}
+    dd {{ margin: 0; text-align: right; color: #dbe9f8; }}
+    footer {{ color: var(--muted); border-top: 1px solid var(--line); padding: 24px 0; }}
+    @media (max-width: 820px) {{
+      .hero {{ min-height: 640px; }}
+      .dashboard, .news-grid {{ grid-template-columns: 1fr; }}
+      h1 {{ font-size: 46px; }}
+    }}
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="eyebrow">Display Intelligence</div>
+      <h1>{html_escape(config['report']['title'])}</h1>
+      <p>Market signals, customer moves, competitor activity, and technology developments organized through a Samsung Display relevance lens.</p>
+      <div class="dashboard">
+        <div class="metric"><span>Report date</span><strong>{report_date.isoformat()}</strong></div>
+        <div class="metric"><span>Articles tracked</span><strong>{len(selected)}</strong></div>
+        <div class="metric"><span>Main topics</span><strong>{html_escape(', '.join(top_topics[:2]) if top_topics else 'None')}</strong></div>
+        <div class="metric"><span>Generated</span><strong>{html_escape(generated_at)}</strong></div>
+      </div>
+    </div>
+  </header>
+  <main>
+    <section class="summary">
+      <div class="section-heading">
+        <p>Signal Dashboard</p>
+        <h2>Executive Summary</h2>
+      </div>
+      <ul>
+        <li>{len(selected)} relevant display-industry signals were collected from configured feeds.</li>
+        <li>Active sections: {html_escape('; '.join(section_mix) if section_mix else 'None')}.</li>
+        <li>Samsung Display relevance is scored from 0 to 100 using direct mentions, product overlap, and adjacent technology signals.</li>
+      </ul>
+    </section>
+    {''.join(section_blocks)}
+    <section class="theme-section implications">
+      <div class="section-heading">
+        <p>Decision Lens</p>
+        <h2>Strategic Implications</h2>
+      </div>
+      <ul>{implications}</ul>
+    </section>
+  </main>
+  <footer>
+    <main>Generated from RSS feeds. Open each source link before making business or investment decisions.</main>
+  </footer>
+</body>
+</html>
+"""
+
+
 def topic_counts(articles: list[Article]) -> list[str]:
     return [topic for topic, _ in topic_counts_with_numbers(articles)]
 
@@ -467,10 +696,13 @@ def main() -> int:
     config = load_config()
     articles = collect_articles(config, report_date)
     report = render_report(report_date, articles, config)
+    html_report = render_html_report(report_date, articles, config)
 
     REPORTS_DIR.mkdir(exist_ok=True)
     report_path = REPORTS_DIR / f"{report_date.isoformat()}.md"
     report_path.write_text(report, encoding="utf-8")
+    DOCS_DIR.mkdir(exist_ok=True)
+    (DOCS_DIR / "index.html").write_text(html_report, encoding="utf-8")
     print(report_path)
     return 0
 
