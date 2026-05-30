@@ -1,0 +1,92 @@
+report:
+  title: Display Industry Daily News
+  timezone: Asia/Seoul
+  max_items: 25
+  lookback_days: 7
+
+keywords:
+  core:
+    - OLED
+    - LCD
+    - microLED
+    - MicroLED
+    - QD-OLED
+    - QLED
+    - Mini LED
+    - AMOLED
+    - display panel
+    - foldable display
+    - flexible display
+    - automotive display
+    - panel price
+    - TV panel
+    - smartphone display
+    - tablet display
+    - monitor panel
+  companies:
+    - Samsung Display
+    - LG Display
+    - BOE
+    - AUO
+    - Innolux
+    - Tianma
+    - Visionox
+    - Japan Display
+    - Sharp
+    - CSOT
+    - TCL CSOT
+    - E Ink
+  market:
+    - display capex
+    - panel shipment
+    - panel demand
+    - display supply chain
+    - display fab
+    - Gen 8.6
+    - oxide backplane
+    - LTPO
+    - LTPS
+
+topics:
+  OLED:
+    - OLED
+    - AMOLED
+    - QD-OLED
+    - tandem OLED
+    - foldable
+    - flexible display
+  LCD:
+    - LCD
+    - TV panel
+    - monitor panel
+    - panel price
+  MicroLED and Mini LED:
+    - microLED
+    - MicroLED
+    - Mini LED
+  Automotive:
+    - automotive display
+    - vehicle display
+    - cockpit display
+  Supply Chain:
+    - capex
+    - fab
+    - shipment
+    - demand
+    - supply chain
+    - Gen 8.6
+    - backplane
+
+feeds:
+  - name: Google News - OLED
+    url: https://news.google.com/rss/search?q=OLED%20display%20industry&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Display Panel
+    url: https://news.google.com/rss/search?q=display%20panel%20industry&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - microLED
+    url: https://news.google.com/rss/search?q=microLED%20display&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - Samsung Display
+    url: https://news.google.com/rss/search?q=%22Samsung%20Display%22&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - LG Display
+    url: https://news.google.com/rss/search?q=%22LG%20Display%22&hl=en-US&gl=US&ceid=US:en
+  - name: Google News - BOE Display
+    url: https://news.google.com/rss/search?q=BOE%20display%20panel&hl=en-US&gl=US&ceid=US:en
