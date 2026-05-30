@@ -628,43 +628,46 @@ def executive_summary(selected: list[Article], grouped: dict[str, list[Article]]
     competitor_articles = grouped.get("competitor_moves", [])
     tech_articles = grouped.get("technology_watch", [])
     supply_articles = grouped.get("materials_equipment_supply_chain", [])
-    app_counts = application_topic_counts(selected)
-    app_mix = ", ".join(f"{name} {count}건" for name, count in app_counts[:5])
+    app_names = {name for name, _ in application_topic_counts(selected)}
 
-    if app_mix:
+    if {"Gaming", "Monitor"} & app_names:
         bullets.append(
-            f"오늘 디스플레이 뉴스는 {app_mix} 중심으로 분포합니다. 단일 패널 기술보다 응용처별 채택 속도와 고객 수요가 더 중요하게 읽히는 시황입니다."
+            "이번 리포트에서 가장 두드러진 흐름은 OLED가 게이밍 모니터와 프리미엄 모니터 시장의 핵심 사양으로 빠르게 자리 잡고 있다는 점입니다. Acer, MSI 등 세트 업체들이 고주사율 QD-OLED 모델을 전면에 내세우면서 패널 경쟁의 초점도 해상도와 주사율, 밝기, 사용 안정성으로 옮겨가고 있습니다."
         )
 
     if has_any(samsung_articles + customer_articles, ["QD-OLED", "360Hz", "4K"]):
         bullets.append(
-            "삼성디스플레이 4K 360Hz QD-OLED 모니터 이슈는 프리미엄 게이밍/모니터 시장에서 고주사율, 고해상도, 밝기 경쟁이 동시에 강화되고 있음을 보여줍니다."
+            "삼성디스플레이의 4K 360Hz QD-OLED는 이 흐름의 중심에 있습니다. 단순한 신제품 발표라기보다 프리미엄 IT 패널에서 삼성디스플레이가 기술 기준을 선점하려는 움직임으로 해석됩니다."
         )
     elif samsung_articles:
         bullets.append(
-            f"삼성디스플레이 직접 관련 이슈는 '{samsung_articles[0].title_ko}'를 중심으로 형성되어 있습니다."
+            f"삼성디스플레이 관련 주요 뉴스는 '{samsung_articles[0].title_ko}'입니다. 해당 이슈는 삼성디스플레이의 제품 포지셔닝과 고객사 확대 가능성을 함께 보여줍니다."
         )
 
-    if customer_articles:
-        customer_titles = "; ".join(article.title_ko for article in customer_articles[:3])
+    if "Automotive" in app_names:
         bullets.append(
-            f"고객사/응용처 측면에서는 {customer_titles}가 핵심입니다. Ferrari 차량용 OLED, Galaxy 패널, 게이밍 모니터, TV/노트북 등으로 OLED 수요처가 넓어지는 흐름입니다."
+            "차량용 디스플레이에서는 Ferrari 전기차 OLED 공급 뉴스와 자동차 디스플레이 시장 성장 전망이 함께 확인됐습니다. OLED가 스마트폰과 TV를 넘어 고급 차량의 실내 경험을 차별화하는 부품으로 확장되고 있다는 신호입니다."
+        )
+
+    if {"Phone", "Note PC", "TV", "Tablet & Foldable"} & app_names:
+        bullets.append(
+            "모바일과 IT 기기에서는 OLED 채택이 계속 넓어지는 가운데 가격 경쟁도 동시에 심해지고 있습니다. Galaxy 패널을 둘러싼 BOE의 가격 공세는 프리미엄 OLED 시장에서도 원가와 품질 경쟁이 함께 진행되고 있음을 보여줍니다."
         )
 
     competitors = company_mentions(competitor_articles, exclude={"Samsung Display"})
     if competitors:
         bullets.append(
-            f"경쟁사 측면에서는 {', '.join(competitors)} 움직임이 확인됩니다. BOE의 Galaxy 패널 가격 공세와 LG Display의 OLED 모니터 양산은 삼성디스플레이의 모바일/IT 고객 방어와 가격 전략에 직접 부담이 됩니다."
+            f"경쟁 구도에서는 {', '.join(competitors)}의 움직임이 눈에 띕니다. LG Display의 OLED 모니터 양산과 BOE의 모바일 패널 가격 공세는 삼성디스플레이가 IT와 모바일 양쪽에서 기술 우위와 원가 경쟁력을 동시에 증명해야 한다는 압박으로 이어집니다."
         )
 
     if has_any(tech_articles + supply_articles, ["microLED", "MicroLED", "module", "factory"]):
         bullets.append(
-            "기술 흐름에서는 microLED와 고성능 OLED 모니터 신호가 함께 관찰됩니다. 단기적으로는 OLED 수익화, 중장기적으로는 microLED/XR/웨어러블 등 차세대 응용처 대응이 중요합니다."
+            "차세대 기술에서는 microLED 협력 뉴스도 이어졌습니다. 아직 단기 매출보다 중장기 옵션에 가까운 영역이지만, 웨어러블과 XR, 산업용 디스플레이로 이어질 수 있어 삼성디스플레이의 기술 포트폴리오 점검이 필요합니다."
         )
 
     if not bullets and selected:
         bullets.append(
-            f"이번 리포트의 핵심 이슈는 '{selected[0].title_ko}'이며, 삼성디스플레이와의 직접/간접 연관성을 중심으로 후속 확인이 필요합니다."
+            f"이번 리포트의 핵심 뉴스는 '{selected[0].title_ko}'입니다. 삼성디스플레이 관점에서는 해당 이슈가 수요처 확대, 가격 경쟁, 기술 차별화 중 어디에 영향을 주는지 확인할 필요가 있습니다."
         )
 
     return bullets[:4]
@@ -753,7 +756,7 @@ def strategic_implications(selected: list[Article], grouped: dict[str, list[Arti
     implications: list[str] = []
     if {"Monitor", "Gaming"} & app_names:
         implications.append(
-            "- 게이밍 모니터와 프리미엄 모니터 기사가 많다는 것은 QD-OLED의 현재 수익화 창구가 IT/게이밍 쪽에 열려 있다는 뜻입니다. 삼성디스플레이는 4K 360Hz, 밝기, 번인 저감, 고객사 디자인인 확보를 묶어서 프리미엄 모니터 포지션을 방어해야 합니다."
+            "- 게이밍 모니터와 프리미엄 모니터 기사가 많다는 것은 QD-OLED의 현재 수익화 창구가 IT/게이밍 쪽에 열려 있다는 뜻입니다. 삼성디스플레이는 4K 360Hz, 밝기, 번인 저감, 고객사 디자인 채택을 묶어서 프리미엄 모니터 포지션을 방어해야 합니다."
         )
     if "Automotive" in app_names:
         implications.append(
